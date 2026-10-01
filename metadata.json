@@ -1,0 +1,6 @@
+{
+  "name": "SRIT AI Assistant",
+  "description": "Your intelligent guide to Shri Ram Institute of Technology - answering questions on admissions, courses, events, clubs, facilities, and campus services.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
