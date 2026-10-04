@@ -2,7 +2,7 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  role: 'ADMIN' | 'CONTENT_EDITOR';
+  role: 'ADMIN' | 'STAFF' | 'CONTENT_EDITOR';
   createdAt: string;
 }
 
@@ -12,6 +12,11 @@ export type InstitutionScope =
   | 'SRIST'
   | 'SRIT_PHARMACY'
   | 'SRIT_MCA'
+  | 'SHRI_RAM_COMMERCE'
+  | 'SHRI_RAM_LAW'
+  | 'SHRI_RAM_MANAGEMENT'
+  | 'RGPV'
+  | 'RDVV'
   | 'OTHER';
 
 export type VerificationStatus = 'Verified' | 'Unverified' | 'Needs Review';
@@ -23,6 +28,7 @@ export interface Institution {
   type: string;
   description: string;
   establishmentDate: string;
+  establishedYear: number;
   location: string;
   website: string;
   contact: string;
@@ -31,6 +37,9 @@ export interface Institution {
   approval: string;
   accreditation: string;
   history: string;
+  parentGroupId?: string;
+  isFirstInstitutionInGroup?: boolean;
+  programsOffered?: string[];
   source: string;
   sourceUrl: string;
   lastVerified: string;
@@ -52,6 +61,8 @@ export interface Person {
   email?: string;
   phone?: string;
   profileImage?: string;
+  startYear?: string;
+  endYear?: string;
   source: string;
   sourceUrl: string;
   status: VerificationStatus;
@@ -66,7 +77,15 @@ export interface FacultyMember {
   department: string;
   qualification: string;
   specialization?: string;
+  subjectsTaught?: string[];
   joiningDate?: string;
+  leavingDate?: string;
+  currentStatus: 'Active' | 'Relieved' | 'On Leave';
+  academicYear: string;
+  isHOD?: boolean;
+  hodStartYear?: string;
+  hodEndYear?: string;
+  previousRoles?: string[];
   registrationStatus?: string;
   institution: string;
   institutionId: InstitutionScope;
@@ -82,8 +101,10 @@ export interface Department {
   abbreviation: string;
   description: string;
   HOD?: string;
+  previousHOD?: string;
   facultyCount: number;
   courses: string[];
+  affiliatedUniversity?: string;
   contact?: string;
   institution: string;
   institutionId: InstitutionScope;
@@ -95,7 +116,7 @@ export interface Department {
 export interface Course {
   id: string;
   name: string;
-  level: 'UG' | 'PG' | 'Diploma';
+  level: 'UG' | 'PG' | 'Diploma' | 'Doctoral';
   department: string;
   duration: string;
   intake: number;
@@ -108,6 +129,95 @@ export interface Course {
   source: string;
   sourceUrl: string;
   lastVerified: string;
+}
+
+export interface SubjectScheme {
+  id: string;
+  university: 'RGPV' | 'RDVV';
+  branch: string;
+  course: string;
+  semester: number;
+  year: number;
+  schemeName: string;
+  academicSession: string;
+  subjectsCount: number;
+  subjectCode: string;
+  subjectName: string;
+  isPractical: boolean;
+  hasLab: boolean;
+  credits: number;
+  theoryHours?: number;
+  practicalHours?: number;
+  isElective: boolean;
+  syllabusOverview: string;
+  sourceUrl: string;
+  source: string;
+  lastVerified: string;
+}
+
+export interface AffiliationRecord {
+  id: string;
+  institution: string;
+  institutionId: InstitutionScope;
+  program: string;
+  university: string;
+  regulatoryAuthority: string;
+  academicYear: string;
+  notes: string;
+  source: string;
+  sourceUrl: string;
+  lastVerified: string;
+}
+
+export interface AttendanceRule {
+  id: string;
+  ruleTitle: string;
+  minimumPercentage: number;
+  maxCondonationPercentage: number;
+  minimumWithCondonation: number;
+  condoningAuthority: string;
+  applicableCourse: string;
+  universityOrdinance: string;
+  medicalPolicy: string;
+  shortageOutcome70: string;
+  below65Outcome: string;
+  source: string;
+  sourceUrl: string;
+  lastVerified: string;
+}
+
+export interface PlacementRecord {
+  id: string;
+  academicYear: string;
+  graduationYear: number;
+  institution: string;
+  institutionId: InstitutionScope;
+  highestPackage: string;
+  highestPackageDetails: string;
+  averagePackage: string;
+  medianPackage: string;
+  recruitersCount: number;
+  studentsEligible: number;
+  studentsPlaced: number;
+  placementRate: string;
+  topCompanies: string[];
+  cseTopPackage?: string;
+  eceTopPackage?: string;
+  studentNameNote: string;
+  source: string;
+  sourceUrl: string;
+  lastVerified: string;
+}
+
+export interface Company {
+  id: string;
+  name: string;
+  industry: string;
+  hiringBranches: string[];
+  typicalRoles: string[];
+  visitedYears: string[];
+  website?: string;
+  source: string;
 }
 
 export interface InstitutionalStatistic {
@@ -123,6 +233,61 @@ export interface InstitutionalStatistic {
   sourceUrl: string;
   publishedDate?: string;
   lastVerified: string;
+}
+
+export type KnowledgeCategory =
+  | 'Institution'
+  | 'Leadership'
+  | 'Faculty'
+  | 'Department'
+  | 'Course'
+  | 'Affiliation'
+  | 'RGPV Scheme'
+  | 'Attendance'
+  | 'Placements'
+  | 'Student Statistics'
+  | 'Staff Statistics'
+  | 'College'
+  | 'Academics'
+  | 'Admissions'
+  | 'Student Services'
+  | 'Facilities'
+  | 'Clubs'
+  | 'Activities'
+  | 'Events'
+  | 'Training'
+  | 'Contact'
+  | 'General';
+
+export type SourceType =
+  | 'Official Website'
+  | 'Official University (RGPV)'
+  | 'Official University (RDVV)'
+  | 'Official Regulatory (AICTE/PCI)'
+  | 'Admin'
+  | 'Uploaded Document'
+  | 'Event Database'
+  | 'Announcement'
+  | 'NIRF 2025 Submission';
+
+export interface KnowledgeItem {
+  id: string;
+  title: string;
+  content: string;
+  category: KnowledgeCategory;
+  subcategory?: string;
+  institutionId?: InstitutionScope;
+  academicYear?: string;
+  sourceType: SourceType;
+  sourceUrl?: string;
+  status: 'Draft' | 'Published';
+  published: boolean;
+  effectiveFrom?: string;
+  effectiveUntil?: string;
+  conflictDetails?: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
 }
 
 export interface CollegeEvent {
@@ -167,61 +332,14 @@ export interface Club {
   updatedAt: string;
 }
 
-export interface KnowledgeItem {
-  id: string;
-  title: string;
-  content: string;
-  category: string;
-  subcategory?: string;
-  sourceType: string;
-  sourceUrl?: string;
-  status: 'Draft' | 'Published';
-  published: boolean;
-  effectiveFrom?: string;
-  effectiveUntil?: string;
-  createdAt: string;
-  updatedAt: string;
-  createdBy: string;
-}
-
-export interface ChatMessage {
-  id: string;
-  conversationId: string;
-  role: 'user' | 'assistant';
-  content: string;
-  sources?: Array<{
-    title: string;
-    sourceType: string;
-    sourceUrl?: string;
-  }>;
-  matchedEvents?: CollegeEvent[];
-  matchedClubs?: Club[];
-  matchedPersons?: Person[];
-  matchedFaculty?: FacultyMember[];
-  matchedStatistics?: InstitutionalStatistic[];
-  feedback?: {
-    rating: 'helpful' | 'unhelpful';
-    reason?: string;
-    comment?: string;
-  };
-  createdAt: string;
-}
-
-export interface Conversation {
-  id: string;
-  userId?: string;
-  title: string;
-  messages: ChatMessage[];
-  createdAt: string;
-  updatedAt: string;
-}
-
 export interface DocumentItem {
   id: string;
   filename: string;
   fileType: string;
   extractedText: string;
-  category: string;
+  category: KnowledgeCategory;
+  institution?: string;
+  department?: string;
   source: string;
   fileSize: number;
   uploadDate: string;
@@ -229,14 +347,40 @@ export interface DocumentItem {
   status: 'Indexed' | 'Pending' | 'Failed';
 }
 
+export interface DetectedEntity {
+  entityType: 'event' | 'knowledge' | 'club';
+  titleOrName: string;
+  categoryOrType: string;
+  date?: string;
+  startTime?: string;
+  venue?: string;
+  eligibility?: string;
+  registrationDeadline?: string;
+  descriptionOrContent: string;
+  summary: string;
+}
+
+export type TicketStatus = 'OPEN' | 'UNDER_REVIEW' | 'ANSWERED' | 'PUBLISHED' | 'REJECTED';
+
 export interface UnansweredQuestion {
   id: string;
+  ticketId: string;
   question: string;
+  userConversationId?: string;
   category: string;
+  detectedIntent?: string;
+  detectedEntities?: string[];
+  possibleInstitution?: string;
+  possibleDepartment?: string;
+  searchesAttempted?: string[];
+  sourcesChecked?: string[];
   frequency: number;
   lastAskedAt: string;
-  status: 'Unanswered' | 'Answered' | 'Ignored';
+  dateAsked: string;
+  status: TicketStatus;
   adminAnswer?: string;
+  notes?: string;
+  verifiedSource?: string;
   resolvedAt?: string;
   resolvedBy?: string;
 }
@@ -263,6 +407,126 @@ export interface AuditLog {
   createdAt: string;
 }
 
+export interface SourcePageRecord {
+  id: string;
+  url: string;
+  pageTitle: string;
+  sourceWebsite: 'sritgroup.net' | 'shriramcommercecollege.com' | 'rgpv.ac.in' | 'rgpv_scheme' | 'other';
+  sourceType: SourceType;
+  retrievedTimestamp: string;
+  lastModifiedTimestamp?: string;
+  contentHash: string;
+  previousContentHash?: string;
+  versionNumber: number;
+  academicYear: string;
+  publicationDate?: string;
+  effectiveDate?: string;
+  institution: string;
+  institutionScope: InstitutionScope;
+  department?: string;
+  course?: string;
+  sourceReliability: string;
+  verificationStatus: VerificationStatus;
+}
+
+export interface SourceVersion {
+  id: string;
+  sourceId: string;
+  url: string;
+  versionNumber: number;
+  contentHash: string;
+  title: string;
+  contentSummary: string;
+  changedDetails?: string;
+  createdAt: string;
+}
+
+export interface KnowledgeHealthItem {
+  domain: string;
+  totalRecords: number;
+  verifiedCount: number;
+  needsReviewCount: number;
+  outdatedCount: number;
+  missingCount: number;
+  conflictingCount: number;
+  healthStatus: 'HEALTHY' | 'NEEDS_ATTENTION' | 'CRITICAL';
+}
+
+export interface SyncStatusInfo {
+  lastSyncTimestamp: string;
+  nextScheduledSyncTimestamp: string;
+  intervalHours: number;
+  isSyncing: boolean;
+  totalMonitoredPages: number;
+  sources: Array<{
+    sourceWebsite: string;
+    name: string;
+    url: string;
+    status: 'Healthy' | 'Needs Attention' | 'Offline';
+    lastChecked: string;
+    pagesCount: number;
+    changedCount: number;
+  }>;
+}
+
+export interface SyncReport {
+  timestamp: string;
+  pagesDiscovered: number;
+  pagesProcessed: number;
+  updated: number;
+  createdNew: number;
+  skipped: number;
+  pages: Array<{
+    url: string;
+    title: string;
+    status: 'new' | 'updated' | 'unchanged' | 'skipped' | 'failed';
+    sourceWebsite: string;
+    version?: number;
+    hash?: string;
+    reason?: string;
+  }>;
+}
+
+export interface ChatMessage {
+  id: string;
+  conversationId: string;
+  role: 'user' | 'assistant';
+  content: string;
+  sources?: Array<{
+    title: string;
+    sourceType: string;
+    sourceUrl?: string;
+    verifiedDate?: string;
+    scope?: string;
+  }>;
+  matchedEvents?: CollegeEvent[];
+  matchedClubs?: Club[];
+  matchedPersons?: Person[];
+  matchedFaculty?: FacultyMember[];
+  matchedStatistics?: InstitutionalStatistic[];
+  matchedSubjects?: SubjectScheme[];
+  matchedAffiliations?: AffiliationRecord[];
+  matchedPlacements?: PlacementRecord[];
+  matchedAttendanceRules?: AttendanceRule[];
+  isUnknownQuestion?: boolean;
+  ticketId?: string;
+  feedback?: {
+    rating: 'helpful' | 'unhelpful';
+    reason?: string;
+    comment?: string;
+  };
+  createdAt: string;
+}
+
+export interface Conversation {
+  id: string;
+  userId?: string;
+  title: string;
+  messages: ChatMessage[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface AnalyticsData {
   totalKnowledge: number;
   publishedKnowledge: number;
@@ -277,31 +541,18 @@ export interface AnalyticsData {
   unhelpfulFeedbacks: number;
   categoryCounts: Record<string, number>;
   mostAskedQuestions: UnansweredQuestion[];
-  totalPersons: number;
-  totalFaculty: number;
-  totalDepartments: number;
-  totalCourses: number;
-  totalStatistics: number;
-  coverage: {
-    leadership: boolean;
-    leadershipCount: number;
-    faculty: boolean;
-    facultyCount: number;
-    departments: boolean;
-    departmentsCount: number;
-    courses: boolean;
-    coursesCount: number;
-    statistics: boolean;
-    statisticsCount: number;
-    facilities: boolean;
-    clubs: boolean;
-    clubsCount: number;
-    events: boolean;
-    eventsCount: number;
-    documents: boolean;
-    documentsCount: number;
-    unansweredQuestions: number;
-  };
+  coverage: Record<string, any>;
+  totalPersons?: number;
+  totalFaculty?: number;
+  totalDepartments?: number;
+  totalCourses?: number;
+  totalStatistics?: number;
+  totalSubjectSchemes?: number;
+  totalAffiliations?: number;
+  totalPlacements?: number;
+  totalAttendanceRules?: number;
+  totalCompanies?: number;
+  totalSourcePages?: number;
 }
 
 export interface DetectedEntity {
@@ -317,33 +568,15 @@ export interface DetectedEntity {
   summary: string;
 }
 
-export interface SyncReport {
-  timestamp: string;
-  pagesDiscovered: number;
-  pagesProcessed: number;
-  updated: number;
-  createdNew: number;
-  skipped: number;
-  pages: Array<{
-    url: string;
-    title: string;
-    status: 'new' | 'updated' | 'skipped' | 'failed';
-    reason?: string;
-  }>;
-}
-
+// Local Auth Token Storage
 const TOKEN_KEY = 'srit_admin_token';
 const USER_KEY = 'srit_admin_user';
 
 export const authStorage = {
-  getToken: () => localStorage.getItem(TOKEN_KEY),
+  getToken: (): string | null => localStorage.getItem(TOKEN_KEY),
   getUser: (): User | null => {
-    try {
-      const u = localStorage.getItem(USER_KEY);
-      return u ? JSON.parse(u) : null;
-    } catch {
-      return null;
-    }
+    const raw = localStorage.getItem(USER_KEY);
+    return raw ? JSON.parse(raw) : null;
   },
   setAuth: (token: string, user: User) => {
     localStorage.setItem(TOKEN_KEY, token);
@@ -358,111 +591,119 @@ export const authStorage = {
 async function fetchJson<T>(url: string, options: RequestInit = {}): Promise<T> {
   const token = authStorage.getToken();
   const headers = new Headers(options.headers || {});
-  if (token && !headers.has('Authorization')) {
+  headers.set('Content-Type', 'application/json');
+  if (token) {
     headers.set('Authorization', `Bearer ${token}`);
   }
-  if (!headers.has('Content-Type') && !(options.body instanceof FormData)) {
-    headers.set('Content-Type', 'application/json');
-  }
 
-  const res = await fetch(url, { ...options, headers });
-  if (!res.ok) {
-    let errMsg = `Request failed: ${res.statusText}`;
+  const response = await fetch(url, { ...options, headers });
+  if (!response.ok) {
+    let errorMsg = `HTTP Error ${response.status}`;
     try {
-      const data = await res.json();
-      if (data.error) errMsg = data.error;
+      const errorData = await response.json();
+      if (errorData.error) errorMsg = errorData.error;
     } catch {
       // ignore
     }
-    throw new Error(errMsg);
+    throw new Error(errorMsg);
   }
-  return res.json();
+  return response.json();
 }
 
 export const api = {
   // Auth
   async login(email: string, password: string): Promise<{ token: string; user: User }> {
-    const res = await fetchJson<{ token: string; user: User }>('/api/auth/login', {
+    const data = await fetchJson<{ token: string; user: User }>('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
-    authStorage.setAuth(res.token, res.user);
-    return res;
+    authStorage.setAuth(data.token, data.user);
+    return data;
   },
 
   async getMe(): Promise<{ user: User }> {
-    return fetchJson<{ user: User }>('/api/auth/me');
-  },
-
-  logout() {
-    authStorage.clearAuth();
+    return fetchJson('/api/auth/me');
   },
 
   // Chat
   async sendMessage(
     message: string,
-    conversationId?: string
+    conversationId?: string,
+    roleMode: 'general' | 'fast' | 'complex' | 'maps' = 'general'
   ): Promise<{
     conversationId: string;
     message: ChatMessage;
-    sources: Array<{ title: string; sourceType: string; sourceUrl?: string }>;
+    sources: any[];
     matchedEvents?: CollegeEvent[];
     matchedClubs?: Club[];
     matchedPersons?: Person[];
     matchedFaculty?: FacultyMember[];
     matchedStatistics?: InstitutionalStatistic[];
+    matchedSubjects?: SubjectScheme[];
+    matchedAffiliations?: AffiliationRecord[];
+    matchedPlacements?: PlacementRecord[];
+    matchedAttendanceRules?: AttendanceRule[];
     isUnknownQuestion?: boolean;
+    ticketId?: string;
   }> {
     return fetchJson('/api/chat', {
       method: 'POST',
-      body: JSON.stringify({ message, conversationId }),
+      body: JSON.stringify({ message, conversationId, roleMode }),
     });
   },
 
-  // Conversations
-  async listConversations(): Promise<{ conversations: Conversation[] }> {
-    return fetchJson('/api/conversations');
+  async queryMaps(data: { query: string; userLocation?: string }): Promise<{
+    answer: string;
+    groundingMetadata?: any;
+    locationContext: {
+      campusName: string;
+      address: string;
+      landmark: string;
+      city: string;
+      railwayDistance: string;
+      airportDistance: string;
+      googleMapsUrl: string;
+    };
+  }> {
+    return fetchJson('/api/ai/maps-query', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   },
 
   async getConversation(id: string): Promise<{ conversation: Conversation }> {
     return fetchJson(`/api/conversations/${id}`);
   },
 
-  async createConversation(title?: string): Promise<{ conversation: Conversation }> {
-    return fetchJson('/api/conversations', {
-      method: 'POST',
-      body: JSON.stringify({ title }),
-    });
+  async listConversations(): Promise<{ conversations: Conversation[] }> {
+    return fetchJson('/api/conversations');
   },
 
-  async clearConversation(id: string): Promise<{ success: boolean }> {
-    return fetchJson(`/api/conversations/${id}/clear`, { method: 'POST' });
-  },
-
-  async deleteConversation(id: string): Promise<{ success: boolean }> {
-    return fetchJson(`/api/conversations/${id}`, { method: 'DELETE' });
+  // Institutions
+  async listInstitutions(): Promise<{ institutions: Institution[] }> {
+    return fetchJson('/api/institutions');
   },
 
   // Persons / Leadership
-  async listPersons(params?: { search?: string; role?: string; institutionId?: string }): Promise<{ persons: Person[] }> {
-    const query = new URLSearchParams();
-    if (params?.search) query.set('search', params.search);
-    if (params?.role) query.set('role', params.role);
-    if (params?.institutionId) query.set('institutionId', params.institutionId);
-    return fetchJson(`/api/persons?${query.toString()}`);
+  async listPersons(options?: { search?: string; role?: string; institutionId?: string }): Promise<{ persons: Person[] }> {
+    const params = new URLSearchParams();
+    if (options?.search) params.set('search', options.search);
+    if (options?.role) params.set('role', options.role);
+    if (options?.institutionId) params.set('institutionId', options.institutionId);
+    return fetchJson(`/api/persons?${params.toString()}`);
   },
 
-  async createPerson(data: Partial<Person>): Promise<{ person: Person }> {
+  async createPerson(person: Omit<Person, 'id' | 'lastVerified'>): Promise<{ person: Person }> {
     return fetchJson('/api/persons', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(person),
     });
   },
 
-  async updatePerson(id: string, data: Partial<Person>): Promise<{ person: Person }> {
+  async updatePerson(id: string, updates: Partial<Person>): Promise<{ person: Person }> {
     return fetchJson(`/api/persons/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(data),
+      body: JSON.stringify(updates),
     });
   },
 
@@ -471,26 +712,26 @@ export const api = {
   },
 
   // Faculty
-  async listFaculty(params?: { search?: string; department?: string; designation?: string; institutionId?: string }): Promise<{ faculty: FacultyMember[]; total: number }> {
-    const query = new URLSearchParams();
-    if (params?.search) query.set('search', params.search);
-    if (params?.department) query.set('department', params.department);
-    if (params?.designation) query.set('designation', params.designation);
-    if (params?.institutionId) query.set('institutionId', params.institutionId);
-    return fetchJson(`/api/faculty?${query.toString()}`);
+  async listFaculty(options?: { search?: string; department?: string; designation?: string; institutionId?: string }): Promise<{ faculty: FacultyMember[] }> {
+    const params = new URLSearchParams();
+    if (options?.search) params.set('search', options.search);
+    if (options?.department) params.set('department', options.department);
+    if (options?.designation) params.set('designation', options.designation);
+    if (options?.institutionId) params.set('institutionId', options.institutionId);
+    return fetchJson(`/api/faculty?${params.toString()}`);
   },
 
-  async createFaculty(data: Partial<FacultyMember>): Promise<{ faculty: FacultyMember }> {
+  async createFaculty(fac: Omit<FacultyMember, 'id' | 'lastVerified'>): Promise<{ faculty: FacultyMember }> {
     return fetchJson('/api/faculty', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(fac),
     });
   },
 
-  async updateFaculty(id: string, data: Partial<FacultyMember>): Promise<{ faculty: FacultyMember }> {
+  async updateFaculty(id: string, updates: Partial<FacultyMember>): Promise<{ faculty: FacultyMember }> {
     return fetchJson(`/api/faculty/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(data),
+      body: JSON.stringify(updates),
     });
   },
 
@@ -499,71 +740,77 @@ export const api = {
   },
 
   // Departments
-  async listDepartments(params?: { search?: string; institutionId?: string }): Promise<{ departments: Department[] }> {
-    const query = new URLSearchParams();
-    if (params?.search) query.set('search', params.search);
-    if (params?.institutionId) query.set('institutionId', params.institutionId);
-    return fetchJson(`/api/departments?${query.toString()}`);
+  async listDepartments(options?: { search?: string; institutionId?: string }): Promise<{ departments: Department[] }> {
+    const params = new URLSearchParams();
+    if (options?.search) params.set('search', options.search);
+    if (options?.institutionId) params.set('institutionId', options.institutionId);
+    return fetchJson(`/api/departments?${params.toString()}`);
   },
 
-  async createDepartment(data: Partial<Department>): Promise<{ department: Department }> {
+  async createDepartment(dept: Omit<Department, 'id' | 'lastVerified'>): Promise<{ department: Department }> {
     return fetchJson('/api/departments', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(dept),
     });
   },
 
-  async updateDepartment(id: string, data: Partial<Department>): Promise<{ department: Department }> {
+  async updateDepartment(id: string, updates: Partial<Department>): Promise<{ department: Department }> {
     return fetchJson(`/api/departments/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(data),
+      body: JSON.stringify(updates),
     });
+  },
+
+  async deleteDepartment(id: string): Promise<{ success: boolean }> {
+    return fetchJson(`/api/departments/${id}`, { method: 'DELETE' });
   },
 
   // Courses
-  async listCourses(params?: { search?: string; department?: string; level?: string; institutionId?: string }): Promise<{ courses: Course[] }> {
-    const query = new URLSearchParams();
-    if (params?.search) query.set('search', params.search);
-    if (params?.department) query.set('department', params.department);
-    if (params?.level) query.set('level', params.level);
-    if (params?.institutionId) query.set('institutionId', params.institutionId);
-    return fetchJson(`/api/courses?${query.toString()}`);
+  async listCourses(options?: { search?: string; department?: string; level?: string }): Promise<{ courses: Course[] }> {
+    const params = new URLSearchParams();
+    if (options?.search) params.set('search', options.search);
+    if (options?.department) params.set('department', options.department);
+    if (options?.level) params.set('level', options.level);
+    return fetchJson(`/api/courses?${params.toString()}`);
   },
 
-  async createCourse(data: Partial<Course>): Promise<{ course: Course }> {
+  async createCourse(course: Omit<Course, 'id' | 'lastVerified'>): Promise<{ course: Course }> {
     return fetchJson('/api/courses', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(course),
     });
   },
 
-  async updateCourse(id: string, data: Partial<Course>): Promise<{ course: Course }> {
+  async updateCourse(id: string, updates: Partial<Course>): Promise<{ course: Course }> {
     return fetchJson(`/api/courses/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(data),
+      body: JSON.stringify(updates),
     });
+  },
+
+  async deleteCourse(id: string): Promise<{ success: boolean }> {
+    return fetchJson(`/api/courses/${id}`, { method: 'DELETE' });
   },
 
   // Statistics
-  async listStatistics(params?: { category?: string; academicYear?: string; institutionId?: string }): Promise<{ statistics: InstitutionalStatistic[] }> {
-    const query = new URLSearchParams();
-    if (params?.category) query.set('category', params.category);
-    if (params?.academicYear) query.set('academicYear', params.academicYear);
-    if (params?.institutionId) query.set('institutionId', params.institutionId);
-    return fetchJson(`/api/statistics?${query.toString()}`);
+  async listStatistics(options?: { category?: string; search?: string }): Promise<{ statistics: InstitutionalStatistic[] }> {
+    const params = new URLSearchParams();
+    if (options?.category) params.set('category', options.category);
+    if (options?.search) params.set('search', options.search);
+    return fetchJson(`/api/statistics?${params.toString()}`);
   },
 
-  async createStatistic(data: Partial<InstitutionalStatistic>): Promise<{ statistic: InstitutionalStatistic }> {
+  async createStatistic(stat: Omit<InstitutionalStatistic, 'id' | 'lastVerified'>): Promise<{ statistic: InstitutionalStatistic }> {
     return fetchJson('/api/statistics', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(stat),
     });
   },
 
-  async updateStatistic(id: string, data: Partial<InstitutionalStatistic>): Promise<{ statistic: InstitutionalStatistic }> {
+  async updateStatistic(id: string, updates: Partial<InstitutionalStatistic>): Promise<{ statistic: InstitutionalStatistic }> {
     return fetchJson(`/api/statistics/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(data),
+      body: JSON.stringify(updates),
     });
   },
 
@@ -571,24 +818,159 @@ export const api = {
     return fetchJson(`/api/statistics/${id}`, { method: 'DELETE' });
   },
 
-  // Institutions
-  async listInstitutions(): Promise<{ institutions: Institution[] }> {
-    return fetchJson('/api/institutions');
+  // Subject Schemes (RGPV & RDVV)
+  async listSubjectSchemes(options?: { branch?: string; semester?: number; year?: number; course?: string; search?: string }): Promise<{ schemes: SubjectScheme[] }> {
+    const params = new URLSearchParams();
+    if (options?.branch) params.set('branch', options.branch);
+    if (options?.semester) params.set('semester', String(options.semester));
+    if (options?.year) params.set('year', String(options.year));
+    if (options?.course) params.set('course', options.course);
+    if (options?.search) params.set('search', options.search);
+    return fetchJson(`/api/subject-schemes?${params.toString()}`);
   },
 
-  // Knowledge Items
-  async listKnowledge(params?: {
-    search?: string;
+  async createSubjectScheme(scheme: Omit<SubjectScheme, 'id' | 'lastVerified'>): Promise<{ scheme: SubjectScheme }> {
+    return fetchJson('/api/subject-schemes', {
+      method: 'POST',
+      body: JSON.stringify(scheme),
+    });
+  },
+
+  async updateSubjectScheme(id: string, updates: Partial<SubjectScheme>): Promise<{ scheme: SubjectScheme }> {
+    return fetchJson(`/api/subject-schemes/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  },
+
+  async deleteSubjectScheme(id: string): Promise<{ success: boolean }> {
+    return fetchJson(`/api/subject-schemes/${id}`, { method: 'DELETE' });
+  },
+
+  // Affiliations
+  async listAffiliations(options?: { institutionId?: string; university?: string; search?: string }): Promise<{ affiliations: AffiliationRecord[] }> {
+    const params = new URLSearchParams();
+    if (options?.institutionId) params.set('institutionId', options.institutionId);
+    if (options?.university) params.set('university', options.university);
+    if (options?.search) params.set('search', options.search);
+    return fetchJson(`/api/affiliations?${params.toString()}`);
+  },
+
+  async createAffiliation(aff: Omit<AffiliationRecord, 'id' | 'lastVerified'>): Promise<{ affiliation: AffiliationRecord }> {
+    return fetchJson('/api/affiliations', {
+      method: 'POST',
+      body: JSON.stringify(aff),
+    });
+  },
+
+  async updateAffiliation(id: string, updates: Partial<AffiliationRecord>): Promise<{ affiliation: AffiliationRecord }> {
+    return fetchJson(`/api/affiliations/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  },
+
+  async deleteAffiliation(id: string): Promise<{ success: boolean }> {
+    return fetchJson(`/api/affiliations/${id}`, { method: 'DELETE' });
+  },
+
+  // Attendance Rules
+  async listAttendanceRules(): Promise<{ rules: AttendanceRule[] }> {
+    return fetchJson('/api/attendance-rules');
+  },
+
+  async createAttendanceRule(rule: Omit<AttendanceRule, 'id' | 'lastVerified'>): Promise<{ rule: AttendanceRule }> {
+    return fetchJson('/api/attendance-rules', {
+      method: 'POST',
+      body: JSON.stringify(rule),
+    });
+  },
+
+  async updateAttendanceRule(id: string, updates: Partial<AttendanceRule>): Promise<{ rule: AttendanceRule }> {
+    return fetchJson(`/api/attendance-rules/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  },
+
+  // Placements
+  async listPlacements(): Promise<{ placements: PlacementRecord[] }> {
+    return fetchJson('/api/placements');
+  },
+
+  async createPlacement(p: Omit<PlacementRecord, 'id' | 'lastVerified'>): Promise<{ placement: PlacementRecord }> {
+    return fetchJson('/api/placements', {
+      method: 'POST',
+      body: JSON.stringify(p),
+    });
+  },
+
+  async updatePlacement(id: string, updates: Partial<PlacementRecord>): Promise<{ placement: PlacementRecord }> {
+    return fetchJson(`/api/placements/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  },
+
+  // Companies
+  async listCompanies(): Promise<{ companies: Company[] }> {
+    return fetchJson('/api/companies');
+  },
+
+  // Teach AI System (Requirement 16)
+  async teachAI(data: {
+    question: string;
+    answer: string;
     category?: string;
-    status?: string;
-    publishedOnly?: boolean;
-  }): Promise<{ items: KnowledgeItem[]; total: number }> {
-    const query = new URLSearchParams();
-    if (params?.search) query.set('search', params.search);
-    if (params?.category) query.set('category', params.category);
-    if (params?.status) query.set('status', params.status);
-    if (params?.publishedOnly) query.set('publishedOnly', 'true');
-    return fetchJson(`/api/knowledge?${query.toString()}`);
+    institution?: string;
+    department?: string;
+    course?: string;
+    academicYear?: string;
+    effectiveDate?: string;
+    source?: string;
+    sourceUrl?: string;
+    notes?: string;
+    verificationStatus?: string;
+  }): Promise<{ success: boolean; knowledgeItem: KnowledgeItem }> {
+    return fetchJson('/api/teach-ai', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Knowledge Health
+  async getKnowledgeHealth(): Promise<{ health: KnowledgeHealthItem[] }> {
+    return fetchJson('/api/knowledge-health');
+  },
+
+  // Sync Dashboard & Status
+  async getSyncStatus(): Promise<{ status: SyncStatusInfo }> {
+    return fetchJson('/api/sync-status');
+  },
+
+  async setSyncInterval(hours: number): Promise<{ success: boolean; intervalHours: number }> {
+    return fetchJson('/api/sync-interval', {
+      method: 'POST',
+      body: JSON.stringify({ hours }),
+    });
+  },
+
+  async listSourcePages(): Promise<{ pages: SourcePageRecord[] }> {
+    return fetchJson('/api/source-pages');
+  },
+
+  async listSourceVersions(sourceId?: string): Promise<{ versions: SourceVersion[] }> {
+    const url = sourceId ? `/api/source-versions?sourceId=${encodeURIComponent(sourceId)}` : '/api/source-versions';
+    return fetchJson(url);
+  },
+
+  // Knowledge Base
+  async listKnowledge(options?: { search?: string; category?: string; status?: string }): Promise<{ knowledge: KnowledgeItem[] }> {
+    const params = new URLSearchParams();
+    if (options?.search) params.set('search', options.search);
+    if (options?.category) params.set('category', options.category);
+    if (options?.status) params.set('status', options.status);
+    return fetchJson(`/api/knowledge?${params.toString()}`);
   },
 
   async createKnowledge(data: Partial<KnowledgeItem>): Promise<{ item: KnowledgeItem }> {
@@ -610,22 +992,11 @@ export const api = {
   },
 
   // Events
-  async listEvents(params?: {
-    search?: string;
-    eventType?: string;
-    status?: string;
-    filterDate?: string;
-    targetMonth?: number;
-    targetYear?: number;
-  }): Promise<{ events: CollegeEvent[]; total: number }> {
-    const query = new URLSearchParams();
-    if (params?.search) query.set('search', params.search);
-    if (params?.eventType) query.set('eventType', params.eventType);
-    if (params?.status) query.set('status', params.status);
-    if (params?.filterDate) query.set('filterDate', params.filterDate);
-    if (params?.targetMonth) query.set('targetMonth', params.targetMonth.toString());
-    if (params?.targetYear) query.set('targetYear', params.targetYear.toString());
-    return fetchJson(`/api/events?${query.toString()}`);
+  async listEvents(options?: { filterDate?: string; search?: string }): Promise<{ events: CollegeEvent[] }> {
+    const params = new URLSearchParams();
+    if (options?.filterDate) params.set('filterDate', options.filterDate);
+    if (options?.search) params.set('search', options.search);
+    return fetchJson(`/api/events?${params.toString()}`);
   },
 
   async createEvent(data: Partial<CollegeEvent>): Promise<{ event: CollegeEvent }> {
@@ -647,11 +1018,8 @@ export const api = {
   },
 
   // Clubs
-  async listClubs(params?: { search?: string; category?: string }): Promise<{ clubs: Club[]; total: number }> {
-    const query = new URLSearchParams();
-    if (params?.search) query.set('search', params.search);
-    if (params?.category) query.set('category', params.category);
-    return fetchJson(`/api/clubs?${query.toString()}`);
+  async listClubs(): Promise<{ clubs: Club[] }> {
+    return fetchJson('/api/clubs');
   },
 
   async createClub(data: Partial<Club>): Promise<{ club: Club }> {
@@ -672,22 +1040,7 @@ export const api = {
     return fetchJson(`/api/clubs/${id}`, { method: 'DELETE' });
   },
 
-  // Teach the AI
-  async teachAiExtract(rawText: string): Promise<{ detected: DetectedEntity }> {
-    return fetchJson('/api/teach-ai/extract', {
-      method: 'POST',
-      body: JSON.stringify({ rawText }),
-    });
-  },
-
-  async teachAiPublish(detected: DetectedEntity): Promise<{ success: boolean; type: string; item: any }> {
-    return fetchJson('/api/teach-ai/publish', {
-      method: 'POST',
-      body: JSON.stringify({ detected }),
-    });
-  },
-
-  // Documents
+  // Document Upload
   async listDocuments(): Promise<{ documents: DocumentItem[] }> {
     return fetchJson('/api/documents');
   },
@@ -696,7 +1049,7 @@ export const api = {
     filename: string;
     fileType: string;
     textContent: string;
-    category: string;
+    category?: string;
     source?: string;
   }): Promise<{ document: DocumentItem; knowledgeItem: KnowledgeItem }> {
     return fetchJson('/api/documents/upload', {
@@ -717,11 +1070,12 @@ export const api = {
   async resolveQuestion(
     id: string,
     adminAnswer: string,
-    createKnowledgeItem = true
+    createKnowledgeItem = true,
+    extraKnowledgeData?: Partial<KnowledgeItem>
   ): Promise<{ question: UnansweredQuestion; knowledgeItem?: KnowledgeItem }> {
     return fetchJson(`/api/unanswered-questions/${id}/resolve`, {
       method: 'POST',
-      body: JSON.stringify({ adminAnswer, createKnowledgeItem }),
+      body: JSON.stringify({ adminAnswer, createKnowledgeItem, ...extraKnowledgeData }),
     });
   },
 
@@ -768,5 +1122,113 @@ export const api = {
 
   async globalSearch(q: string): Promise<{ results: any }> {
     return fetchJson(`/api/global-search?q=${encodeURIComponent(q)}`);
+  },
+
+  // Teach the AI extraction & publishing
+  async teachAiExtract(text: string): Promise<{ detected: DetectedEntity }> {
+    return fetchJson('/api/teach-ai/extract', {
+      method: 'POST',
+      body: JSON.stringify({ text }),
+    });
+  },
+
+  async teachAiPublish(entity: DetectedEntity): Promise<{ success: boolean; item: any }> {
+    return fetchJson('/api/teach-ai/publish', {
+      method: 'POST',
+      body: JSON.stringify(entity),
+    });
+  },
+
+  async summarizeAnswer(text: string): Promise<{ summary: string }> {
+    return fetchJson('/api/chat/summarize', {
+      method: 'POST',
+      body: JSON.stringify({ text }),
+    });
+  },
+
+  // Advanced AI Campus Tools Suite
+  async generateStudyPlan(data: {
+    branch: string;
+    semester: number;
+    weeksUntilExam?: number;
+    targetTopics?: string;
+  }): Promise<{ plan: string; subjects: string[] }> {
+    return fetchJson('/api/ai/study-plan', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async generatePlacementPrep(data: {
+    targetCompany: string;
+    branch?: string;
+    targetRole?: string;
+  }): Promise<{ guide: string; topTopics: string[] }> {
+    return fetchJson('/api/ai/placement-prep', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async generateCondonationLetter(data: {
+    studentName: string;
+    enrollmentNo?: string;
+    branch: string;
+    semester: number;
+    attendancePercent: number;
+    medicalReason: string;
+    startDate?: string;
+    endDate?: string;
+    doctorName?: string;
+  }): Promise<{ letter: string; condonable: boolean; ruleNotes: string }> {
+    return fetchJson('/api/ai/condonation-letter', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async explainConcept(data: {
+    concept: string;
+    subject?: string;
+    semester?: number;
+  }): Promise<{ explanation: string; examTips: string; keyTakeaways: string[] }> {
+    return fetchJson('/api/ai/explain-concept', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async analyzeNotice(data: {
+    noticeText: string;
+  }): Promise<{
+    summary: string;
+    keyDates: string[];
+    actionRequired: string[];
+    targetAudience: string;
+    urgency: 'HIGH' | 'MEDIUM' | 'LOW';
+  }> {
+    return fetchJson('/api/ai/analyze-notice', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async calculateAttendance(data: {
+    totalClasses: number;
+    attendedClasses: number;
+  }): Promise<{
+    currentPercentage: number;
+    classesHeld: number;
+    classesAttended: number;
+    status: 'SAFE' | 'CONDONABLE' | 'DETAINED_DANGER';
+    classesNeededFor75: number;
+    canMissBefore75: number;
+    recommendation: string;
+    ordinanceRule: string;
+  }> {
+    return fetchJson('/api/ai/attendance-calc', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   },
 };

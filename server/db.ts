@@ -12,11 +12,31 @@ import {
   Conversation,
   ChatMessage,
   Institution,
+  InstitutionGroup,
+  University,
+  CourseHierarchy,
+  BranchHierarchy,
+  AcademicAchievement,
+  StudentStrengthRecord,
+  AdmissionInformation,
+  FeeStructure,
+  Scholarship,
+  AcademicRule,
+  StudentContext,
   Person,
   FacultyMember,
   Department,
   Course,
   InstitutionalStatistic,
+  SubjectScheme,
+  AffiliationRecord,
+  AttendanceRule,
+  PlacementRecord,
+  Company,
+  KnowledgeRelationship,
+  SourcePageRecord,
+  SourceVersion,
+  KnowledgeHealthItem,
 } from './types.js';
 import {
   initialUsers,
@@ -24,11 +44,29 @@ import {
   initialClubs,
   initialEvents,
   initialInstitutions,
+  initialInstitutionGroups,
+  initialUniversities,
+  initialCoursesHierarchy,
+  initialBranchesHierarchy,
+  initialAchievements,
+  initialStudentStrength,
+  initialAdmissions,
+  initialFeeStructures,
+  initialScholarships,
+  initialAcademicRules,
   initialPersons,
   initialFaculty,
   initialDepartments,
   initialCourses,
   initialStatistics,
+  initialSubjectSchemes,
+  initialAffiliations,
+  initialAttendanceRules,
+  initialPlacements,
+  initialCompanies,
+  initialRelationships,
+  initialSourcePages,
+  initialUnansweredQuestions,
 } from './seedData.js';
 
 interface DatabaseSchema {
@@ -41,12 +79,30 @@ interface DatabaseSchema {
   unansweredQuestions: UnansweredQuestion[];
   feedbacks: FeedbackItem[];
   auditLogs: AuditLog[];
+  groups: InstitutionGroup[];
   institutions: Institution[];
+  universities: University[];
+  coursesHierarchy: CourseHierarchy[];
+  branchesHierarchy: BranchHierarchy[];
+  achievements: AcademicAchievement[];
+  studentStrength: StudentStrengthRecord[];
+  admissions: AdmissionInformation[];
+  feeStructures: FeeStructure[];
+  scholarships: Scholarship[];
+  academicRules: AcademicRule[];
   persons: Person[];
   faculty: FacultyMember[];
   departments: Department[];
   courses: Course[];
   statistics: InstitutionalStatistic[];
+  subjectSchemes: SubjectScheme[];
+  affiliations: AffiliationRecord[];
+  attendanceRules: AttendanceRule[];
+  placements: PlacementRecord[];
+  companies: Company[];
+  relationships: KnowledgeRelationship[];
+  sourcePages: SourcePageRecord[];
+  sourceVersions: SourceVersion[];
 }
 
 const DATA_DIR = path.resolve(process.cwd(), 'data');
@@ -94,7 +150,7 @@ class Database {
       events: loaded?.events?.length ? loaded.events : initialEvents,
       clubs: loaded?.clubs?.length ? loaded.clubs : initialClubs,
       documents: loaded?.documents || [],
-      unansweredQuestions: loaded?.unansweredQuestions || [],
+      unansweredQuestions: mergeById(loaded?.unansweredQuestions, initialUnansweredQuestions),
       feedbacks: loaded?.feedbacks || [],
       auditLogs: loaded?.auditLogs || [
         {
@@ -109,11 +165,29 @@ class Database {
         },
       ],
       institutions: mergeById(loaded?.institutions, initialInstitutions),
+      groups: mergeById(loaded?.groups, initialInstitutionGroups),
+      universities: mergeById(loaded?.universities, initialUniversities),
+      coursesHierarchy: mergeById(loaded?.coursesHierarchy, initialCoursesHierarchy),
+      branchesHierarchy: mergeById(loaded?.branchesHierarchy, initialBranchesHierarchy),
+      achievements: mergeById(loaded?.achievements, initialAchievements),
+      studentStrength: mergeById(loaded?.studentStrength, initialStudentStrength),
+      admissions: mergeById(loaded?.admissions, initialAdmissions),
+      feeStructures: mergeById(loaded?.feeStructures, initialFeeStructures),
+      scholarships: mergeById(loaded?.scholarships, initialScholarships),
+      academicRules: mergeById(loaded?.academicRules, initialAcademicRules),
       persons: mergeById(loaded?.persons, initialPersons),
       faculty: mergeById(loaded?.faculty, initialFaculty),
       departments: mergeById(loaded?.departments, initialDepartments),
       courses: mergeById(loaded?.courses, initialCourses),
       statistics: mergeById(loaded?.statistics, initialStatistics),
+      subjectSchemes: mergeById(loaded?.subjectSchemes, initialSubjectSchemes),
+      affiliations: mergeById(loaded?.affiliations, initialAffiliations),
+      attendanceRules: mergeById(loaded?.attendanceRules, initialAttendanceRules),
+      placements: mergeById(loaded?.placements, initialPlacements),
+      companies: mergeById(loaded?.companies, initialCompanies),
+      relationships: mergeById(loaded?.relationships, initialRelationships),
+      sourcePages: mergeById(loaded?.sourcePages, initialSourcePages),
+      sourceVersions: loaded?.sourceVersions || [],
     };
 
     // Always persist merged state to ensure file is in sync
@@ -148,7 +222,15 @@ class Database {
     return this.data.users.map(({ passwordHash, ...user }) => user);
   }
 
-  // --- Institutions ---
+  // --- Institutions & Groups ---
+  listGroups(): InstitutionGroup[] {
+    return this.data.groups || [];
+  }
+
+  getGroupById(id: string): InstitutionGroup | undefined {
+    return (this.data.groups || []).find((g) => g.id === id || g.shortName.toLowerCase() === id.toLowerCase());
+  }
+
   listInstitutions(): Institution[] {
     return this.data.institutions;
   }
@@ -156,6 +238,244 @@ class Database {
   getInstitutionById(id: string): Institution | undefined {
     return this.data.institutions.find(
       (i) => i.id === id || i.shortName.toLowerCase() === id.toLowerCase()
+    );
+  }
+
+  resolveInstitutionAlias(query: string): Institution | undefined {
+    const q = query.toLowerCase().trim();
+    // Specific well-known checks
+    if (q.includes('shri ram commerce') || q.includes('commerce college') || q.includes('shri ram college of commerce')) {
+      return this.data.institutions.find((i) => i.id === 'SHRI_RAM_COMMERCE');
+    }
+    if (q.includes('srist') || q.includes('science and technology') || q.includes('science & technology')) {
+      return this.data.institutions.find((i) => i.id === 'SRIST');
+    }
+    if (q.includes('pharmacy') || q.includes('srip') || q.includes('b.pharm')) {
+      return this.data.institutions.find((i) => i.id === 'SRIT_PHARMACY');
+    }
+    if (q.includes('law') || q.includes('ll.b') || q.includes('llb')) {
+      return this.data.institutions.find((i) => i.id === 'SHRI_RAM_LAW');
+    }
+    if (q.includes('srit') || q.includes('institute of technology') || q.includes('engineering college')) {
+      return this.data.institutions.find((i) => i.id === 'SRIT');
+    }
+    return this.data.institutions.find((i) => {
+      const name = i.name.toLowerCase();
+      const shortName = i.shortName.toLowerCase();
+      return q === shortName || name.includes(q) || q.includes(name);
+    });
+  }
+
+  // --- Universities ---
+  listUniversities(): University[] {
+    return this.data.universities || [];
+  }
+
+  getUniversityById(id: string): University | undefined {
+    return (this.data.universities || []).find((u) => u.id === id || u.shortName.toLowerCase() === id.toLowerCase());
+  }
+
+  resolveUniversityAlias(query: string): University | undefined {
+    const q = query.toLowerCase().trim();
+    if (q.includes('rgpv') || q.includes('proudyogiki') || q.includes('technical university')) {
+      return (this.data.universities || []).find((u) => u.id === 'RGPV');
+    }
+    if (q.includes('rdvv') || q.includes('durgavati') || q.includes('jabalpur university')) {
+      return (this.data.universities || []).find((u) => u.id === 'RDVV');
+    }
+    return undefined;
+  }
+
+  // --- Course & Branch Hierarchy ---
+  listCoursesHierarchy(institutionId?: string): CourseHierarchy[] {
+    let list = this.data.coursesHierarchy || [];
+    if (institutionId && institutionId !== 'ALL') {
+      list = list.filter((c) => c.institutionId === institutionId);
+    }
+    return list;
+  }
+
+  findCoursesHierarchy(query: string, institutionId?: string): CourseHierarchy[] {
+    const q = query.toLowerCase().trim();
+    let list = this.listCoursesHierarchy(institutionId);
+    if (!q) return list;
+    return list.filter(
+      (c) =>
+        c.courseName.toLowerCase().includes(q) ||
+        c.shortName.toLowerCase().includes(q) ||
+        c.branches.some((b) => b.toLowerCase().includes(q))
+    );
+  }
+
+  listBranchesHierarchy(courseId?: string): BranchHierarchy[] {
+    let list = this.data.branchesHierarchy || [];
+    if (courseId) {
+      list = list.filter((b) => b.courseId === courseId);
+    }
+    return list;
+  }
+
+  findBranchesHierarchy(query: string, courseId?: string): BranchHierarchy[] {
+    const q = query.toLowerCase().trim();
+    let list = this.listBranchesHierarchy(courseId);
+    if (!q) return list;
+    return list.filter((b) => b.branchName.toLowerCase().includes(q) || b.branchCode.toLowerCase() === q);
+  }
+
+  // --- Academic Achievements ---
+  listAchievements(institutionId?: string): AcademicAchievement[] {
+    let list = this.data.achievements || [];
+    if (institutionId && institutionId !== 'ALL') {
+      list = list.filter((a) => a.institutionId === institutionId);
+    }
+    return list;
+  }
+
+  findAchievements(query: string, institutionId?: string): AcademicAchievement[] {
+    const q = query.toLowerCase().trim();
+    let list = this.listAchievements(institutionId);
+    if (!q || q.length < 3) return list;
+    return list.filter(
+      (a) =>
+        a.title.toLowerCase().includes(q) ||
+        a.description.toLowerCase().includes(q) ||
+        a.department.toLowerCase().includes(q) ||
+        (a.competition && a.competition.toLowerCase().includes(q)) ||
+        (a.award && a.award.toLowerCase().includes(q)) ||
+        (a.student && a.student.toLowerCase().includes(q))
+    );
+  }
+
+  createAchievement(item: Omit<AcademicAchievement, 'id' | 'lastVerified'>, performedBy = 'Admin'): AcademicAchievement {
+    const newA: AcademicAchievement = {
+      ...item,
+      id: `achieve-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+      lastVerified: new Date().toISOString().split('T')[0],
+      verificationStatus: 'VERIFIED',
+    };
+    if (!this.data.achievements) this.data.achievements = [];
+    this.data.achievements.push(newA);
+    this.saveData();
+
+    this.recordAuditLog({
+      action: 'CREATE_ACHIEVEMENT',
+      entityType: 'AcademicAchievement',
+      entityId: newA.id,
+      entityTitle: newA.title,
+      details: `Added achievement for ${newA.institution} (${newA.department})`,
+      performedBy,
+    });
+    return newA;
+  }
+
+  // --- Student Strength ---
+  listStudentStrength(institutionId?: string): StudentStrengthRecord[] {
+    let list = this.data.studentStrength || [];
+    if (institutionId && institutionId !== 'ALL') {
+      list = list.filter((s) => s.institutionId === institutionId);
+    }
+    return list;
+  }
+
+  findStudentStrength(query: string, institutionId?: string): StudentStrengthRecord[] {
+    const q = query.toLowerCase().trim();
+    let list = this.listStudentStrength(institutionId);
+    if (!q || q.length < 3) return list;
+    return list.filter(
+      (s) =>
+        s.course.toLowerCase().includes(q) ||
+        (s.branch && s.branch.toLowerCase().includes(q)) ||
+        s.academicYear.includes(q) ||
+        s.institution.toLowerCase().includes(q)
+    );
+  }
+
+  // --- Admission Information ---
+  listAdmissions(institutionId?: string): AdmissionInformation[] {
+    let list = this.data.admissions || [];
+    if (institutionId && institutionId !== 'ALL') {
+      list = list.filter((a) => a.institutionId === institutionId);
+    }
+    return list;
+  }
+
+  findAdmissions(query: string, institutionId?: string): AdmissionInformation[] {
+    const q = query.toLowerCase().trim();
+    let list = this.listAdmissions(institutionId);
+    if (!q || q.length < 3) return list;
+    return list.filter(
+      (a) =>
+        a.course.toLowerCase().includes(q) ||
+        (a.branch && a.branch.toLowerCase().includes(q)) ||
+        a.admissionType.toLowerCase().includes(q) ||
+        a.eligibility.toLowerCase().includes(q) ||
+        a.counsellingProcess.toLowerCase().includes(q)
+    );
+  }
+
+  // --- Fee Structures ---
+  listFees(institutionId?: string): FeeStructure[] {
+    let list = this.data.feeStructures || [];
+    if (institutionId && institutionId !== 'ALL') {
+      list = list.filter((f) => f.institutionId === institutionId);
+    }
+    return list;
+  }
+
+  findFees(query: string, institutionId?: string): FeeStructure[] {
+    const q = query.toLowerCase().trim();
+    let list = this.listFees(institutionId);
+    if (!q || q.length < 3) return list;
+    return list.filter(
+      (f) =>
+        f.course.toLowerCase().includes(q) ||
+        (f.branch && f.branch.toLowerCase().includes(q)) ||
+        f.feeType.toLowerCase().includes(q) ||
+        f.totalEstimatedFee.toLowerCase().includes(q)
+    );
+  }
+
+  // --- Scholarships ---
+  listScholarships(institutionId?: string): Scholarship[] {
+    let list = this.data.scholarships || [];
+    if (institutionId && institutionId !== 'ALL') {
+      list = list.filter((s) => s.institutionId === institutionId || s.institutionId === 'SHRI_RAM_GROUP');
+    }
+    return list;
+  }
+
+  findScholarships(query: string, institutionId?: string): Scholarship[] {
+    const q = query.toLowerCase().trim();
+    let list = this.listScholarships(institutionId);
+    if (!q || q.length < 3) return list;
+    return list.filter(
+      (s) =>
+        s.name.toLowerCase().includes(q) ||
+        s.eligibleCategory.toLowerCase().includes(q) ||
+        s.eligibility.toLowerCase().includes(q) ||
+        s.amount.toLowerCase().includes(q)
+    );
+  }
+
+  // --- Academic Rules ---
+  listAcademicRules(institutionId?: string): AcademicRule[] {
+    let list = this.data.academicRules || [];
+    if (institutionId && institutionId !== 'ALL') {
+      list = list.filter((r) => r.institutionId === institutionId || r.institutionId === 'SRIT');
+    }
+    return list;
+  }
+
+  findAcademicRules(query: string, institutionId?: string): AcademicRule[] {
+    const q = query.toLowerCase().trim();
+    let list = this.listAcademicRules(institutionId);
+    if (!q || q.length < 3) return list;
+    return list.filter(
+      (r) =>
+        r.ruleTitle.toLowerCase().includes(q) ||
+        (r.condonation ? r.condonation.toLowerCase().includes(q) : false) ||
+        r.shortageOutcome70.toLowerCase().includes(q) ||
+        r.below65Outcome.toLowerCase().includes(q)
     );
   }
 
@@ -196,6 +516,37 @@ class Database {
   findPersonByNameOrRole(query: string): Person | undefined {
     const q = query.toLowerCase().trim();
 
+    // 0. Karsoliya leadership checks
+    if (q.includes('karsoliya') || q.includes('karsolia') || q.includes('karsholiya')) {
+      if (q.includes('rajul')) {
+        return this.data.persons.find((p) => p.fullName.toLowerCase().includes('rajul'));
+      }
+      if (q.includes('ramendra')) {
+        return this.data.persons.find((p) => p.fullName.toLowerCase().includes('ramendra'));
+      }
+      if (q.includes('sonam')) {
+        return this.data.persons.find((p) => p.fullName.toLowerCase().includes('sonam'));
+      }
+      // General "who is karsoliya sir?" or "rk karsoliya" -> Founder Chairman Er. R. K. Karsoliya
+      const rk = this.data.persons.find(
+        (p) => p.fullName.toLowerCase().includes('r. k. karsoliya') || p.role === 'FOUNDER_CHAIRMAN'
+      );
+      if (rk) return rk;
+      return this.data.persons.find((p) => p.fullName.toLowerCase().includes('karsoliya'));
+    }
+
+    if (q.includes('rewa shiksha samiti')) {
+      if (q.includes('vice chairman')) {
+        return this.data.persons.find((p) => p.role === 'VICE_CHAIRMAN');
+      }
+      return this.data.persons.find((p) => p.role === 'CHAIRMAN_SOCIETY');
+    }
+
+    if (q.includes('secretary')) {
+      const sec = this.data.persons.find((p) => p.role === 'SECRETARY');
+      if (sec) return sec;
+    }
+
     // 1. Direct or normalized name match
     const exact = this.data.persons.find(
       (p) =>
@@ -207,6 +558,17 @@ class Database {
 
     // 2. Specific role / person checks
     if (
+      q.includes('founder') ||
+      q.includes('founder chairman') ||
+      q.includes('owner') ||
+      q.includes('who founded') ||
+      q.includes('who started the college')
+    ) {
+      const founder = this.data.persons.find((p) => p.role === 'FOUNDER_CHAIRMAN');
+      if (founder) return founder;
+    }
+
+    if (
       q.includes('kosta') ||
       q.includes('shiv prasad') ||
       q.includes('group director') ||
@@ -217,10 +579,7 @@ class Database {
       (q.includes('director') && !q.includes('principal') && !q.includes('placement')) ||
       q.includes('who heads') ||
       q.includes('head of shri ram group') ||
-      q.includes('who runs') ||
-      q.includes('founder') ||
-      q.includes('owner') ||
-      q.includes('owns')
+      q.includes('who runs')
     ) {
       const kosta = this.data.persons.find(
         (p) => p.fullName.toLowerCase().includes('kosta') || p.role === 'GROUP_DIRECTOR'
@@ -254,7 +613,17 @@ class Database {
       if (tpo) return tpo;
     }
 
-    // 3. Substring match fallback
+    // 3. Substring & token match fallback
+    const tokens = q.split(/\s+/).filter((t) => t.length >= 4);
+    for (const token of tokens) {
+      const match = this.data.persons.find(
+        (p) =>
+          p.fullName.toLowerCase().includes(token) ||
+          p.designation.toLowerCase().includes(token)
+      );
+      if (match) return match;
+    }
+
     return this.data.persons.find(
       (p) =>
         q.includes(p.fullName.toLowerCase()) ||
@@ -266,9 +635,21 @@ class Database {
     const q = query.toLowerCase().trim();
     const list: Person[] = [];
 
+    // If asking about Karsoliya or Karsoliya team
+    if (q.includes('karsoliya') || q.includes('karsolia') || q.includes('karsholiya')) {
+      const karsoliyas = this.data.persons.filter((p) =>
+        p.fullName.toLowerCase().includes('karsoliya')
+      );
+      if (karsoliyas.length > 0) return karsoliyas;
+    }
+
+    const rk = this.data.persons.find((p) => p.role === 'FOUNDER_CHAIRMAN');
     const kosta = this.data.persons.find((p) => p.fullName.toLowerCase().includes('kosta'));
     const gupta = this.data.persons.find((p) => p.designation.toLowerCase().includes('principal'));
     const tpo = this.data.persons.find((p) => p.role === 'TPO' || p.designation.toLowerCase().includes('tpo'));
+    const rajul = this.data.persons.find((p) => p.fullName.toLowerCase().includes('rajul'));
+    const ramendra = this.data.persons.find((p) => p.fullName.toLowerCase().includes('ramendra'));
+    const sonam = this.data.persons.find((p) => p.fullName.toLowerCase().includes('sonam'));
 
     if (
       q.includes('founder') ||
@@ -278,8 +659,14 @@ class Database {
       q.includes('who heads') ||
       q.includes('leadership') ||
       q.includes('administration') ||
-      q.includes('directors')
+      q.includes('directors') ||
+      q.includes('team') ||
+      q.includes('our team')
     ) {
+      if (rk) list.push(rk);
+      if (rajul) list.push(rajul);
+      if (ramendra) list.push(ramendra);
+      if (sonam) list.push(sonam);
       if (kosta) list.push(kosta);
       if (gupta) list.push(gupta);
       if (tpo) list.push(tpo);
@@ -798,6 +1185,668 @@ class Database {
     return true;
   }
 
+  // --- Subject Schemes (RGPV & RDVV) ---
+  listSubjectSchemes(options?: {
+    branch?: string;
+    semester?: number;
+    year?: number;
+    course?: string;
+    search?: string;
+  }): SubjectScheme[] {
+    let list = [...this.data.subjectSchemes];
+    if (options?.branch && options.branch !== 'ALL') {
+      list = list.filter((s) => s.branch.toLowerCase().includes(options.branch!.toLowerCase()));
+    }
+    if (options?.semester) {
+      list = list.filter((s) => s.semester === Number(options.semester));
+    }
+    if (options?.year) {
+      list = list.filter((s) => s.year === Number(options.year));
+    }
+    if (options?.course && options.course !== 'ALL') {
+      list = list.filter((s) => s.course.toLowerCase().includes(options.course!.toLowerCase()));
+    }
+    if (options?.search) {
+      const q = options.search.toLowerCase();
+      list = list.filter(
+        (s) =>
+          s.subjectCode.toLowerCase().includes(q) ||
+          s.subjectName.toLowerCase().includes(q) ||
+          s.branch.toLowerCase().includes(q) ||
+          s.syllabusOverview.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }
+
+  getSubjectSchemeById(id: string): SubjectScheme | undefined {
+    return this.data.subjectSchemes.find((s) => s.id === id);
+  }
+
+  findSubjectSchemes(query: string): SubjectScheme[] {
+    const q = query.toLowerCase().trim();
+    let sem: number | undefined;
+    if (q.includes('1st sem') || q.includes('first sem') || q.includes('semester 1') || q.includes('sem 1')) sem = 1;
+    else if (q.includes('2nd sem') || q.includes('second sem') || q.includes('semester 2') || q.includes('sem 2')) sem = 2;
+    else if (q.includes('3rd sem') || q.includes('third sem') || q.includes('semester 3') || q.includes('sem 3')) sem = 3;
+    else if (q.includes('4th sem') || q.includes('fourth sem') || q.includes('semester 4') || q.includes('sem 4')) sem = 4;
+    else if (q.includes('5th sem') || q.includes('fifth sem') || q.includes('semester 5') || q.includes('sem 5')) sem = 5;
+
+    let yr: number | undefined;
+    if (q.includes('1st year') || q.includes('first year') || q.includes('year 1')) yr = 1;
+    else if (q.includes('2nd year') || q.includes('second year') || q.includes('year 2')) yr = 2;
+    else if (q.includes('3rd year') || q.includes('third year') || q.includes('year 3')) yr = 3;
+
+    let branch: string | undefined;
+    if (q.includes('cse') || q.includes('computer science')) branch = 'CSE';
+    else if (q.includes('aiml') || q.includes('artificial intelligence')) branch = 'AI/ML';
+    else if (q.includes('data science') || q.includes('in ds')) branch = 'DS';
+
+    let results = this.data.subjectSchemes.filter((s) => {
+      // Semester match
+      if (sem && s.semester !== sem) return false;
+      // Year match
+      if (yr && s.year !== yr) return false;
+      // Branch match
+      if (branch && !s.branch.toUpperCase().includes(branch) && !s.branch.includes('Common')) return false;
+
+      // Subject code or name match (require >= 3 characters or valid branch abbreviation to avoid false positives on greetings)
+      if (q.length >= 3 || ['cs', 'it', 'me', 'ce', 'ec', 'ee', 'al', 'ds'].includes(q)) {
+        if (
+          s.subjectCode.toLowerCase() === q ||
+          s.subjectCode.toLowerCase().includes(q) ||
+          q.includes(s.subjectCode.toLowerCase()) ||
+          s.subjectName.toLowerCase().includes(q) ||
+          q.includes(s.subjectName.toLowerCase())
+        ) {
+          return true;
+        }
+      }
+
+      // Keywords match
+      if (
+        q.includes('discrete') && s.subjectName.toLowerCase().includes('discrete') ||
+        q.includes('data structure') && s.subjectName.toLowerCase().includes('data structure') ||
+        q.includes('digital system') && s.subjectName.toLowerCase().includes('digital system') ||
+        q.includes('energy') && s.subjectName.toLowerCase().includes('energy') ||
+        q.includes('oop') && s.subjectName.toLowerCase().includes('object oriented') ||
+        q.includes('python') && s.subjectName.toLowerCase().includes('python') ||
+        q.includes('physics') && s.subjectName.toLowerCase().includes('physics') ||
+        q.includes('chemistry') && s.subjectName.toLowerCase().includes('chemistry') ||
+        q.includes('math') && s.subjectName.toLowerCase().includes('math') ||
+        q.includes('graphics') && s.subjectName.toLowerCase().includes('graphics') ||
+        q.includes('electrical') && s.subjectName.toLowerCase().includes('electrical') ||
+        q.includes('civil') && s.subjectName.toLowerCase().includes('civil') ||
+        q.includes('mechanical') && s.subjectName.toLowerCase().includes('mechanical')
+      ) {
+        return true;
+      }
+
+      // If branch or semester was specified and no specific subject filter
+      if ((sem || yr) && (branch || s.branch.includes('Common First Year'))) {
+        return true;
+      }
+
+      return false;
+    });
+
+    if (results.length === 0 && (q.includes('subject') || q.includes('syllabus') || q.includes('scheme'))) {
+      if (q.includes('first year') || q.includes('1st year')) {
+        results = this.data.subjectSchemes.filter((s) => s.year === 1);
+      } else if (q.includes('3rd') || q.includes('third')) {
+        results = this.data.subjectSchemes.filter((s) => s.semester === 3);
+      }
+    }
+
+    return results;
+  }
+
+  createSubjectScheme(scheme: Omit<SubjectScheme, 'id'>, performedBy = 'Admin'): SubjectScheme {
+    const newScheme: SubjectScheme = {
+      ...scheme,
+      id: `scheme-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+      lastVerified: new Date().toISOString().split('T')[0],
+    };
+    this.data.subjectSchemes.push(newScheme);
+    this.saveData();
+
+    this.recordAuditLog({
+      action: 'CREATE_SUBJECT_SCHEME',
+      entityType: 'SubjectScheme',
+      entityId: newScheme.id,
+      entityTitle: `${newScheme.subjectCode}: ${newScheme.subjectName}`,
+      details: `Added ${newScheme.subjectCode} to ${newScheme.branch} Sem ${newScheme.semester}`,
+      performedBy,
+    });
+
+    return newScheme;
+  }
+
+  updateSubjectScheme(id: string, updates: Partial<SubjectScheme>, performedBy = 'Admin'): SubjectScheme | null {
+    const index = this.data.subjectSchemes.findIndex((s) => s.id === id);
+    if (index === -1) return null;
+    this.data.subjectSchemes[index] = {
+      ...this.data.subjectSchemes[index],
+      ...updates,
+      lastVerified: new Date().toISOString().split('T')[0],
+    };
+    this.saveData();
+    return this.data.subjectSchemes[index];
+  }
+
+  deleteSubjectScheme(id: string, performedBy = 'Admin'): boolean {
+    const index = this.data.subjectSchemes.findIndex((s) => s.id === id);
+    if (index === -1) return false;
+    this.data.subjectSchemes.splice(index, 1);
+    this.saveData();
+    return true;
+  }
+
+  // --- Affiliation Intelligence ---
+  listAffiliations(options?: {
+    institutionId?: string;
+    university?: string;
+    search?: string;
+  }): AffiliationRecord[] {
+    let list = [...this.data.affiliations];
+    if (options?.institutionId && options.institutionId !== 'ALL') {
+      list = list.filter((a) => a.institutionId === options.institutionId);
+    }
+    if (options?.university && options.university !== 'ALL') {
+      list = list.filter((a) => a.university.toLowerCase().includes(options.university!.toLowerCase()));
+    }
+    if (options?.search) {
+      const q = options.search.toLowerCase();
+      list = list.filter(
+        (a) =>
+          a.institution.toLowerCase().includes(q) ||
+          a.program.toLowerCase().includes(q) ||
+          a.university.toLowerCase().includes(q) ||
+          a.notes.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }
+
+  getAffiliationById(id: string): AffiliationRecord | undefined {
+    return this.data.affiliations.find((a) => a.id === id);
+  }
+
+  findAffiliations(query: string): AffiliationRecord[] {
+    const q = query.toLowerCase().trim();
+    return this.data.affiliations.filter((a) => {
+      const instLower = a.institution.toLowerCase();
+      const progLower = a.program.toLowerCase();
+      const uniLower = a.university.toLowerCase();
+      const notesLower = a.notes.toLowerCase();
+
+      if (
+        (q.includes('srit') || q.includes('b.tech') || q.includes('engineering') || q.includes('m.tech')) &&
+        (a.institutionId === 'SRIT' || progLower.includes('b.tech'))
+      ) return true;
+
+      if (
+        (q.includes('commerce') || q.includes('b.com') || q.includes('bcom') || q.includes('bba') || q.includes('bca') || q.includes('shri ram college')) &&
+        (a.institutionId === 'SHRI_RAM_COMMERCE' || progLower.includes('b.com') || progLower.includes('bca'))
+      ) return true;
+
+      if (
+        (q.includes('law') || q.includes('ll.b') || q.includes('llb')) &&
+        (a.institutionId === 'SHRI_RAM_LAW' || progLower.includes('law'))
+      ) return true;
+
+      if (
+        (q.includes('pharmacy') || q.includes('pharma') || q.includes('b.pharm')) &&
+        (a.institutionId === 'SRIT_PHARMACY' || progLower.includes('pharm'))
+      ) return true;
+
+      if (
+        (q.includes('rgpv') && uniLower.includes('rgpv')) ||
+        (q.includes('rdvv') && uniLower.includes('rdvv'))
+      ) return true;
+
+      return (
+        instLower.includes(q) ||
+        q.includes(instLower) ||
+        progLower.includes(q) ||
+        q.includes(progLower) ||
+        notesLower.includes(q)
+      );
+    });
+  }
+
+  createAffiliation(aff: Omit<AffiliationRecord, 'id'>, performedBy = 'Admin'): AffiliationRecord {
+    const newAff: AffiliationRecord = {
+      ...aff,
+      id: `aff-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+      lastVerified: new Date().toISOString().split('T')[0],
+    };
+    this.data.affiliations.push(newAff);
+    this.saveData();
+
+    this.recordAuditLog({
+      action: 'CREATE_AFFILIATION',
+      entityType: 'AffiliationRecord',
+      entityId: newAff.id,
+      entityTitle: `${newAff.institution} -> ${newAff.university}`,
+      details: `Added affiliation rule for ${newAff.program}`,
+      performedBy,
+    });
+
+    return newAff;
+  }
+
+  updateAffiliation(id: string, updates: Partial<AffiliationRecord>, performedBy = 'Admin'): AffiliationRecord | null {
+    const index = this.data.affiliations.findIndex((a) => a.id === id);
+    if (index === -1) return null;
+    this.data.affiliations[index] = {
+      ...this.data.affiliations[index],
+      ...updates,
+      lastVerified: new Date().toISOString().split('T')[0],
+    };
+    this.saveData();
+    return this.data.affiliations[index];
+  }
+
+  deleteAffiliation(id: string, performedBy = 'Admin'): boolean {
+    const index = this.data.affiliations.findIndex((a) => a.id === id);
+    if (index === -1) return false;
+    this.data.affiliations.splice(index, 1);
+    this.saveData();
+    return true;
+  }
+
+  // --- Attendance Rules Intelligence ---
+  listAttendanceRules(): AttendanceRule[] {
+    return this.data.attendanceRules;
+  }
+
+  getAttendanceRuleById(id: string): AttendanceRule | undefined {
+    return this.data.attendanceRules.find((a) => a.id === id);
+  }
+
+  findAttendanceRules(query: string): AttendanceRule[] {
+    const q = query.toLowerCase().trim();
+    if (
+      q.includes('attendance') ||
+      q.includes('condone') ||
+      q.includes('condoned') ||
+      q.includes('condonation') ||
+      q.includes('75%') ||
+      q.includes('70%') ||
+      q.includes('65%') ||
+      q.includes('detained') ||
+      q.includes('medical') ||
+      q.includes('shortage')
+    ) {
+      return this.data.attendanceRules;
+    }
+    return this.data.attendanceRules.filter(
+      (a) =>
+        a.ruleTitle.toLowerCase().includes(q) ||
+        (a.applicableCourse ? a.applicableCourse.toLowerCase().includes(q) : false) ||
+        a.medicalPolicy.toLowerCase().includes(q) ||
+        a.shortageOutcome70.toLowerCase().includes(q)
+    );
+  }
+
+  createAttendanceRule(rule: Omit<AttendanceRule, 'id'>, performedBy = 'Admin'): AttendanceRule {
+    const newRule: AttendanceRule = {
+      ...rule,
+      id: `att-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+      lastVerified: new Date().toISOString().split('T')[0],
+    };
+    this.data.attendanceRules.push(newRule);
+    this.saveData();
+    return newRule;
+  }
+
+  updateAttendanceRule(id: string, updates: Partial<AttendanceRule>, performedBy = 'Admin'): AttendanceRule | null {
+    const index = this.data.attendanceRules.findIndex((a) => a.id === id);
+    if (index === -1) return null;
+    this.data.attendanceRules[index] = {
+      ...this.data.attendanceRules[index],
+      ...updates,
+      lastVerified: new Date().toISOString().split('T')[0],
+    };
+    this.saveData();
+    return this.data.attendanceRules[index];
+  }
+
+  // --- Placement Intelligence ---
+  listPlacements(): PlacementRecord[] {
+    return this.data.placements.sort((a, b) => b.graduationYear - a.graduationYear);
+  }
+
+  getPlacementById(id: string): PlacementRecord | undefined {
+    return this.data.placements.find((p) => p.id === id);
+  }
+
+  findPlacements(query: string): PlacementRecord[] {
+    const q = query.toLowerCase().trim();
+    if (
+      q.includes('placement') ||
+      q.includes('package') ||
+      q.includes('highest package') ||
+      q.includes('average package') ||
+      q.includes('salary') ||
+      q.includes('recruiter') ||
+      q.includes('recruiters') ||
+      q.includes('placed') ||
+      q.includes('companies') ||
+      q.includes('recruitment')
+    ) {
+      if (q.includes('2024') || q.includes('last year')) {
+        const p24 = this.data.placements.find((p) => p.academicYear.includes('2024'));
+        if (p24) return [p24];
+      }
+      return this.data.placements;
+    }
+    return this.data.placements.filter(
+      (p) =>
+        p.academicYear.toLowerCase().includes(q) ||
+        (p.topCompanies ? p.topCompanies.some((c) => c.toLowerCase().includes(q)) : false) ||
+        p.highestPackage.toLowerCase().includes(q)
+    );
+  }
+
+  createPlacement(p: Omit<PlacementRecord, 'id'>, performedBy = 'Admin'): PlacementRecord {
+    const newP: PlacementRecord = {
+      ...p,
+      id: `placement-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+      lastVerified: new Date().toISOString().split('T')[0],
+    };
+    this.data.placements.push(newP);
+    this.saveData();
+    return newP;
+  }
+
+  updatePlacement(id: string, updates: Partial<PlacementRecord>, performedBy = 'Admin'): PlacementRecord | null {
+    const index = this.data.placements.findIndex((p) => p.id === id);
+    if (index === -1) return null;
+    this.data.placements[index] = {
+      ...this.data.placements[index],
+      ...updates,
+      lastVerified: new Date().toISOString().split('T')[0],
+    };
+    this.saveData();
+    return this.data.placements[index];
+  }
+
+  // --- Companies ---
+  listCompanies(): Company[] {
+    return this.data.companies;
+  }
+
+  findCompanies(query: string): Company[] {
+    const q = query.toLowerCase().trim();
+    return this.data.companies.filter(
+      (c) => {
+        const cName = (c.name || c.companyName || '').toLowerCase();
+        const matchesName = cName.includes(q) || (cName.length > 0 && q.includes(cName));
+        const matchesBranches = c.hiringBranches ? c.hiringBranches.some((b) => b.toLowerCase().includes(q) || q.includes(b.toLowerCase())) : false;
+        return matchesName || matchesBranches;
+      }
+    );
+  }
+
+  createCompany(c: Omit<Company, 'id'>): Company {
+    const newC: Company = {
+      ...c,
+      id: `comp-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+    };
+    this.data.companies.push(newC);
+    this.saveData();
+    return newC;
+  }
+
+  // --- Knowledge Relationships (Graph) ---
+  listRelationships(): KnowledgeRelationship[] {
+    return this.data.relationships;
+  }
+
+  findRelationships(entityId: string): KnowledgeRelationship[] {
+    return this.data.relationships.filter(
+      (r) => r.fromEntityId === entityId || r.toEntityId === entityId
+    );
+  }
+
+  createRelationship(rel: Omit<KnowledgeRelationship, 'id'>): KnowledgeRelationship {
+    const newRel: KnowledgeRelationship = {
+      ...rel,
+      id: `rel-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+    };
+    this.data.relationships.push(newRel);
+    this.saveData();
+    return newRel;
+  }
+
+  // --- Source Pages & Versioning ---
+  listSourcePages(): SourcePageRecord[] {
+    return this.data.sourcePages;
+  }
+
+  getSourcePageByUrl(url: string): SourcePageRecord | undefined {
+    return this.data.sourcePages.find((s) => s.url === url);
+  }
+
+  upsertSourcePage(page: Partial<SourcePageRecord> & { url: string }): SourcePageRecord {
+    const index = this.data.sourcePages.findIndex((s) => s.url === page.url);
+    if (index >= 0) {
+      this.data.sourcePages[index] = {
+        ...this.data.sourcePages[index],
+        ...page,
+        retrievedTimestamp: new Date().toISOString(),
+      };
+      this.saveData();
+      return this.data.sourcePages[index];
+    } else {
+      const newPage: SourcePageRecord = {
+        id: `src-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+        url: page.url,
+        pageTitle: page.pageTitle || 'Official College Page',
+        sourceWebsite: page.sourceWebsite || 'sritgroup.net',
+        sourceType: page.sourceType || 'Official Website',
+        retrievedTimestamp: new Date().toISOString(),
+        contentHash: page.contentHash || 'init-hash',
+        versionNumber: page.versionNumber || 1,
+        academicYear: page.academicYear || '2026-27',
+        institution: page.institution || 'Shri Ram Group',
+        institutionScope: page.institutionScope || 'SHRI_RAM_GROUP',
+        sourceReliability: page.sourceReliability || 'Official college/institution website',
+        verificationStatus: page.verificationStatus || 'Verified',
+      };
+      this.data.sourcePages.push(newPage);
+      this.saveData();
+      return newPage;
+    }
+  }
+
+  listSourceVersions(sourceId?: string): SourceVersion[] {
+    if (sourceId) {
+      return this.data.sourceVersions.filter((v) => v.sourceId === sourceId);
+    }
+    return this.data.sourceVersions;
+  }
+
+  addSourceVersion(version: Omit<SourceVersion, 'id' | 'createdAt'>): SourceVersion {
+    const newVersion: SourceVersion = {
+      ...version,
+      id: `sv-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+      createdAt: new Date().toISOString(),
+    };
+    this.data.sourceVersions.unshift(newVersion);
+    this.saveData();
+    return newVersion;
+  }
+
+  // --- Knowledge Health System ---
+  getKnowledgeHealth(): KnowledgeHealthItem[] {
+    const items: KnowledgeHealthItem[] = [
+      {
+        domain: 'Leadership',
+        totalRecords: this.data.persons.length,
+        verifiedCount: this.data.persons.filter((p) => p.status === 'Verified').length,
+        needsReviewCount: this.data.persons.filter((p) => p.status === 'Needs Review').length,
+        outdatedCount: 0,
+        missingCount: 0,
+        conflictingCount: 0,
+        healthStatus: 'HEALTHY',
+      },
+      {
+        domain: 'Faculty',
+        totalRecords: this.data.faculty.length,
+        verifiedCount: this.data.faculty.filter((f) => f.status === 'Verified').length,
+        needsReviewCount: this.data.faculty.filter((f) => f.status !== 'Verified').length,
+        outdatedCount: 0,
+        missingCount: 0,
+        conflictingCount: 0,
+        healthStatus: 'HEALTHY',
+      },
+      {
+        domain: 'Departments',
+        totalRecords: this.data.departments.length,
+        verifiedCount: this.data.departments.length,
+        needsReviewCount: 0,
+        outdatedCount: 0,
+        missingCount: 0,
+        conflictingCount: 0,
+        healthStatus: 'HEALTHY',
+      },
+      {
+        domain: 'Courses',
+        totalRecords: this.data.courses.length,
+        verifiedCount: this.data.courses.length,
+        needsReviewCount: 0,
+        outdatedCount: 0,
+        missingCount: 0,
+        conflictingCount: 0,
+        healthStatus: 'HEALTHY',
+      },
+      {
+        domain: 'RGPV Schemes & Subjects',
+        totalRecords: this.data.subjectSchemes.length,
+        verifiedCount: this.data.subjectSchemes.length,
+        needsReviewCount: 0,
+        outdatedCount: 0,
+        missingCount: 0,
+        conflictingCount: 0,
+        healthStatus: 'HEALTHY',
+      },
+      {
+        domain: 'Affiliations (RGPV & RDVV)',
+        totalRecords: this.data.affiliations.length,
+        verifiedCount: this.data.affiliations.length,
+        needsReviewCount: 0,
+        outdatedCount: 0,
+        missingCount: 0,
+        conflictingCount: 0,
+        healthStatus: 'HEALTHY',
+      },
+      {
+        domain: 'Attendance Rules',
+        totalRecords: this.data.attendanceRules.length,
+        verifiedCount: this.data.attendanceRules.length,
+        needsReviewCount: 0,
+        outdatedCount: 0,
+        missingCount: 0,
+        conflictingCount: 0,
+        healthStatus: 'HEALTHY',
+      },
+      {
+        domain: 'Placements',
+        totalRecords: this.data.placements.length,
+        verifiedCount: this.data.placements.length,
+        needsReviewCount: 0,
+        outdatedCount: 0,
+        missingCount: 0,
+        conflictingCount: 0,
+        healthStatus: 'HEALTHY',
+      },
+      {
+        domain: 'Companies',
+        totalRecords: this.data.companies.length,
+        verifiedCount: this.data.companies.length,
+        needsReviewCount: 0,
+        outdatedCount: 0,
+        missingCount: 0,
+        conflictingCount: 0,
+        healthStatus: 'HEALTHY',
+      },
+      {
+        domain: 'Events & Fests',
+        totalRecords: this.data.events.length,
+        verifiedCount: this.data.events.filter((e) => e.status === 'Published').length,
+        needsReviewCount: this.data.events.filter((e) => e.status === 'Draft').length,
+        outdatedCount: this.data.events.filter((e) => e.status === 'Completed').length,
+        missingCount: 0,
+        conflictingCount: 0,
+        healthStatus: 'HEALTHY',
+      },
+      {
+        domain: 'Clubs',
+        totalRecords: this.data.clubs.length,
+        verifiedCount: this.data.clubs.filter((c) => c.published).length,
+        needsReviewCount: 0,
+        outdatedCount: 0,
+        missingCount: 0,
+        conflictingCount: 0,
+        healthStatus: 'HEALTHY',
+      },
+      {
+        domain: 'Facilities & Campus',
+        totalRecords: this.data.knowledge.filter((k) => k.category === 'Facilities').length,
+        verifiedCount: this.data.knowledge.filter((k) => k.category === 'Facilities' && k.published).length,
+        needsReviewCount: 0,
+        outdatedCount: 0,
+        missingCount: 0,
+        conflictingCount: 0,
+        healthStatus: 'HEALTHY',
+      },
+      {
+        domain: 'Admissions & Eligibility',
+        totalRecords: this.data.courses.length,
+        verifiedCount: this.data.courses.length,
+        needsReviewCount: 0,
+        outdatedCount: 0,
+        missingCount: 0,
+        conflictingCount: 0,
+        healthStatus: 'HEALTHY',
+      },
+      {
+        domain: 'Scholarships & Concessions',
+        totalRecords: this.data.knowledge.filter((k) => k.title.toLowerCase().includes('scholarship')).length,
+        verifiedCount: this.data.knowledge.filter((k) => k.title.toLowerCase().includes('scholarship')).length,
+        needsReviewCount: 1,
+        outdatedCount: 0,
+        missingCount: 0,
+        conflictingCount: 0,
+        healthStatus: 'NEEDS_ATTENTION',
+      },
+      {
+        domain: 'Notices & Circulars',
+        totalRecords: this.data.documents.length,
+        verifiedCount: this.data.documents.filter((d) => d.status === 'Indexed').length,
+        needsReviewCount: this.data.documents.filter((d) => d.status === 'Pending').length,
+        outdatedCount: 0,
+        missingCount: 0,
+        conflictingCount: 0,
+        healthStatus: 'HEALTHY',
+      },
+      {
+        domain: 'Academic Calendar',
+        totalRecords: 2,
+        verifiedCount: 2,
+        needsReviewCount: 0,
+        outdatedCount: 0,
+        missingCount: 0,
+        conflictingCount: 0,
+        healthStatus: 'HEALTHY',
+      },
+    ];
+    return items;
+  }
+
   // --- Knowledge Items ---
   listKnowledge(options?: {
     search?: string;
@@ -1200,6 +2249,21 @@ class Database {
     return this.data.conversations.find((c) => c.id === id);
   }
 
+  updateConversationContext(
+    conversationId: string,
+    context: Partial<StudentContext>
+  ): Conversation | null {
+    const conv = this.getConversation(conversationId);
+    if (!conv) return null;
+    conv.studentContext = {
+      ...(conv.studentContext || {}),
+      ...context,
+    };
+    conv.updatedAt = new Date().toISOString();
+    this.saveData();
+    return conv;
+  }
+
   createConversation(title: string = 'New Conversation', userId?: string): Conversation {
     const now = new Date().toISOString();
     const conv: Conversation = {
@@ -1293,28 +2357,51 @@ class Database {
     return this.data.feedbacks;
   }
 
-  // --- Unanswered Questions ---
-  recordUnansweredQuestion(questionText: string, category: string = 'General'): UnansweredQuestion {
+  // --- Unanswered Questions & Ticket System ---
+  recordUnansweredQuestion(
+    questionText: string,
+    category: string = 'General',
+    extra?: Partial<UnansweredQuestion>
+  ): UnansweredQuestion {
     const trimmed = questionText.trim().toLowerCase();
     const existing = this.data.unansweredQuestions.find(
       (q) => q.question.trim().toLowerCase() === trimmed
     );
 
+    const now = new Date().toISOString();
+
     if (existing) {
       existing.frequency += 1;
-      existing.lastAskedAt = new Date().toISOString();
-      if (existing.status === 'Ignored') existing.status = 'Unanswered';
+      existing.lastAskedAt = now;
+      if (existing.status === 'REJECTED') existing.status = 'OPEN';
+      if (extra?.userConversationId) existing.userConversationId = extra.userConversationId;
+      if (extra?.detectedIntent) existing.detectedIntent = extra.detectedIntent;
+      if (extra?.detectedEntities) existing.detectedEntities = extra.detectedEntities;
+      if (extra?.possibleInstitution) existing.possibleInstitution = extra.possibleInstitution;
+      if (extra?.possibleDepartment) existing.possibleDepartment = extra.possibleDepartment;
+      if (extra?.searchesAttempted) existing.searchesAttempted = extra.searchesAttempted;
+      if (extra?.sourcesChecked) existing.sourcesChecked = extra.sourcesChecked;
       this.saveData();
       return existing;
     }
 
     const newQuestion: UnansweredQuestion = {
       id: `uq-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+      ticketId: extra?.ticketId || `TCK-${Date.now().toString().slice(-6)}`,
       question: questionText.trim(),
-      category,
+      category: extra?.category || category,
+      userConversationId: extra?.userConversationId,
+      detectedIntent: extra?.detectedIntent,
+      detectedEntities: extra?.detectedEntities,
+      possibleInstitution: extra?.possibleInstitution,
+      possibleDepartment: extra?.possibleDepartment,
+      searchesAttempted: extra?.searchesAttempted || ['Official Knowledge Base', 'Official Sources'],
+      sourcesChecked: extra?.sourcesChecked || ['sritgroup.net', 'rgpv.ac.in'],
       frequency: 1,
-      lastAskedAt: new Date().toISOString(),
-      status: 'Unanswered',
+      lastAskedAt: now,
+      dateAsked: now,
+      status: 'OPEN',
+      notes: extra?.notes,
     };
 
     this.data.unansweredQuestions.unshift(newQuestion);
@@ -1332,12 +2419,13 @@ class Database {
     id: string,
     adminAnswer: string,
     resolvedBy = 'Admin',
-    createKnowledgeItem = true
+    createKnowledgeItem = true,
+    extraKnowledgeData?: Partial<KnowledgeItem>
   ): { question: UnansweredQuestion; knowledgeItem?: KnowledgeItem } | null {
-    const item = this.data.unansweredQuestions.find((q) => q.id === id);
+    const item = this.data.unansweredQuestions.find((q) => q.id === id || q.ticketId === id);
     if (!item) return null;
 
-    item.status = 'Answered';
+    item.status = 'ANSWERED';
     item.adminAnswer = adminAnswer;
     item.resolvedAt = new Date().toISOString();
     item.resolvedBy = resolvedBy;
@@ -1347,13 +2435,16 @@ class Database {
       knowledgeItem = this.createKnowledge({
         title: item.question,
         content: adminAnswer,
-        category: (item.category as any) || 'General',
+        category: (extraKnowledgeData?.category as any) || (item.category as any) || 'General',
+        institutionId: extraKnowledgeData?.institutionId || 'SRIT',
+        academicYear: extraKnowledgeData?.academicYear || '2026-27',
         sourceType: 'Admin',
-        sourceUrl: 'Admin Answer to Student Question',
+        sourceUrl: extraKnowledgeData?.sourceUrl || 'Admin Answer to Student Question',
         status: 'Published',
         published: true,
         createdBy: resolvedBy,
       });
+      item.status = 'PUBLISHED';
     }
 
     this.saveData();
@@ -1361,9 +2452,9 @@ class Database {
     this.recordAuditLog({
       action: 'RESOLVE_UNANSWERED_QUESTION',
       entityType: 'UnansweredQuestion',
-      entityId: item.id,
+      entityId: item.ticketId || item.id,
       entityTitle: item.question,
-      details: `Answered question: "${item.question}". Published new knowledge item.`,
+      details: `Answered question ticket ${item.ticketId}: "${item.question}". Published new knowledge item.`,
       performedBy: resolvedBy,
     });
 
@@ -1371,15 +2462,15 @@ class Database {
   }
 
   ignoreQuestion(id: string): boolean {
-    const item = this.data.unansweredQuestions.find((q) => q.id === id);
+    const item = this.data.unansweredQuestions.find((q) => q.id === id || q.ticketId === id);
     if (!item) return false;
-    item.status = 'Ignored';
+    item.status = 'REJECTED';
     this.saveData();
     return true;
   }
 
   deleteQuestion(id: string): boolean {
-    const index = this.data.unansweredQuestions.findIndex((q) => q.id === id);
+    const index = this.data.unansweredQuestions.findIndex((q) => q.id === id || q.ticketId === id);
     if (index === -1) return false;
     this.data.unansweredQuestions.splice(index, 1);
     this.saveData();
@@ -1422,7 +2513,7 @@ class Database {
     );
 
     const unansweredQuestionsCount = this.data.unansweredQuestions.filter(
-      (q) => q.status === 'Unanswered'
+      (q) => q.status === 'OPEN' || q.status === 'UNDER_REVIEW'
     ).length;
     const totalQuestionsAsked = this.data.unansweredQuestions.reduce(
       (acc, q) => acc + q.frequency,
@@ -1465,6 +2556,15 @@ class Database {
       eventsCount: this.data.events.length,
       documents: this.data.documents.length > 0,
       documentsCount: this.data.documents.length,
+      schemesCount: (this.data.subjectSchemes || []).length,
+      affiliationsCount: (this.data.affiliations || []).length,
+      attendanceRulesCount: (this.data.attendanceRules || []).length,
+      placementsCount: (this.data.placements || []).length,
+      companiesCount: (this.data.companies || []).length,
+      achievementsCount: (this.data.achievements || []).length,
+      admissionsCount: (this.data.admissions || []).length,
+      feesCount: (this.data.feeStructures || []).length,
+      scholarshipsCount: (this.data.scholarships || []).length,
       unansweredQuestions: unansweredQuestionsCount,
     };
 
@@ -1488,6 +2588,12 @@ class Database {
       totalDepartments: this.data.departments.length,
       totalCourses: this.data.courses.length,
       totalStatistics: this.data.statistics.length,
+      totalSubjectSchemes: this.data.subjectSchemes.length,
+      totalAffiliations: this.data.affiliations.length,
+      totalPlacements: this.data.placements.length,
+      totalAttendanceRules: this.data.attendanceRules.length,
+      totalCompanies: this.data.companies.length,
+      totalSourcePages: this.data.sourcePages.length,
     };
   }
 
@@ -1506,6 +2612,9 @@ class Database {
         departments: [],
         courses: [],
         statistics: [],
+        subjectSchemes: [],
+        affiliations: [],
+        placements: [],
       };
     }
 
@@ -1592,6 +2701,32 @@ class Database {
       .filter((u) => u.question.toLowerCase().includes(q))
       .slice(0, 5);
 
+    const subjectSchemes = this.data.subjectSchemes
+      .filter(
+        (s) =>
+          s.subjectCode.toLowerCase().includes(q) ||
+          s.subjectName.toLowerCase().includes(q) ||
+          s.branch.toLowerCase().includes(q)
+      )
+      .slice(0, 5);
+
+    const affiliations = this.data.affiliations
+      .filter(
+        (a) =>
+          a.institution.toLowerCase().includes(q) ||
+          a.program.toLowerCase().includes(q) ||
+          a.university.toLowerCase().includes(q)
+      )
+      .slice(0, 5);
+
+    const placements = this.data.placements
+      .filter(
+        (p) =>
+          p.academicYear.toLowerCase().includes(q) ||
+          p.highestPackage.toLowerCase().includes(q)
+      )
+      .slice(0, 5);
+
     return {
       knowledge,
       events,
@@ -1603,6 +2738,9 @@ class Database {
       departments,
       courses,
       statistics,
+      subjectSchemes,
+      affiliations,
+      placements,
     };
   }
 }

@@ -22,6 +22,16 @@ import {
   BarChart3,
   Briefcase,
   Building2,
+  Volume2,
+  VolumeX,
+  Copy,
+  Check,
+  Zap,
+  Wand2,
+  FileText,
+  Lightbulb,
+  Calculator,
+  FileCheck,
 } from 'lucide-react';
 import {
   api,
@@ -42,6 +52,7 @@ interface StudentChatProps {
   initialPrompt?: string;
   onConversationCreated?: (id: string) => void;
   onViewEvent?: (event: CollegeEvent) => void;
+  onOpenAITools?: (tool?: any) => void;
 }
 
 export const StudentChat: React.FC<StudentChatProps> = ({
@@ -49,6 +60,7 @@ export const StudentChat: React.FC<StudentChatProps> = ({
   initialPrompt,
   onConversationCreated,
   onViewEvent,
+  onOpenAITools,
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -62,10 +74,60 @@ export const StudentChat: React.FC<StudentChatProps> = ({
   const [selectedEvent, setSelectedEvent] = useState<CollegeEvent | null>(null);
   const [isListening, setIsListening] = useState(false);
   const [speechSupported, setSpeechSupported] = useState(false);
+  const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
+  const [summaries, setSummaries] = useState<Record<string, string>>({});
+  const [summarizingId, setSummarizingId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<any>(null);
+
+  const speakText = (msgId: string, text: string) => {
+    if (!('speechSynthesis' in window)) return;
+    if (speakingMsgId === msgId) {
+      window.speechSynthesis.cancel();
+      setSpeakingMsgId(null);
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const cleanText = text.replace(/[*_#`[\]()]/g, '').trim();
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+    utterance.onend = () => setSpeakingMsgId(null);
+    utterance.onerror = () => setSpeakingMsgId(null);
+    setSpeakingMsgId(msgId);
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const copyText = (msgId: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(msgId);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const toggleSummarize = async (msgId: string, text: string) => {
+    if (summaries[msgId]) {
+      setSummaries((prev) => {
+        const next = { ...prev };
+        delete next[msgId];
+        return next;
+      });
+      return;
+    }
+    setSummarizingId(msgId);
+    try {
+      const res = await api.summarizeAnswer(text);
+      if (res?.summary) {
+        setSummaries((prev) => ({ ...prev, [msgId]: res.summary }));
+      }
+    } catch (e) {
+      console.error('Error summarizing:', e);
+    } finally {
+      setSummarizingId(null);
+    }
+  };
 
   // Check speech recognition support
   useEffect(() => {
@@ -215,21 +277,44 @@ export const StudentChat: React.FC<StudentChatProps> = ({
   };
 
   const starterQuestions = [
-    { label: 'Group Director', query: 'Who is the Group Director / Director General?' },
-    { label: 'Principal of SRIT', query: 'Who is the Principal of SRIT?' },
-    { label: 'Dr. S. P. Kosta', query: 'Tell me about Dr. S. P. Kosta.' },
-    { label: 'Mathematics Faculty', query: 'Who teaches Engineering Mathematics? Tell me about Dr. Reeta Malviya.' },
-    { label: 'Student Strength', query: 'How many students are there at SRIT and in the Shri Ram Group?' },
-    { label: 'Establishment History', query: 'When was SRIT established and what is the history of Shri Ram Group?' },
-    { label: 'Head of Placement (TPO)', query: 'Who is the TPO of Shri Ram Group?' },
-    { label: 'B.Tech Branches & Intake', query: 'What branches are there in B.Tech and what are the intakes?' },
-    { label: 'Clubs & EPL Cricket', query: 'What clubs can I join and what is EPL?' },
+    { label: 'Founder Chairman', query: 'Who is Founder Chairman Er. R. K. Karsoliya?' },
+    { label: 'Executive Team', query: 'Who are the members of the Shri Ram Group leadership team?' },
+    { label: 'Group Director', query: 'Who is Group Director Dr. S. P. Kosta?' },
+    { label: 'HOD of CSE', query: 'Who is the HOD of CSE?' },
+    { label: 'SRIT Affiliation', query: 'Which university is SRIT affiliated with?' },
+    { label: 'Minimum Attendance', query: 'What is the minimum attendance required?' },
+    { label: '3rd Sem Subjects', query: 'What subjects are in 3rd semester CSE?' },
+    { label: 'Highest Package', query: 'What was the highest package last year?' },
+    { label: 'Rewa Shiksha Samiti', query: 'What is Rewa Shiksha Samiti?' },
+  ];
+
+  const quickPromptPills = [
+    'Who is Founder Chairman Er. R. K. Karsoliya?',
+    'Executive Leadership Team (Our Team)',
+    'Who is Group Director Dr. S. P. Kosta?',
+    'Attendance 75% & Condonation Rule',
+    'SRIT Highest Placement Package',
+    '3rd Sem CSE Subjects',
   ];
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] max-w-5xl mx-auto w-full px-2 sm:px-4">
+      {/* AI Grounding Status Bar */}
+      <div className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-transparent border border-blue-500/20 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 my-2 shrink-0">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 animate-pulse" />
+          <span className="font-semibold text-slate-700 dark:text-slate-200">
+            Multi-Model Gemini AI Engine
+          </span>
+          <span className="hidden sm:inline text-slate-400">• Grounded in verified SRIT & Rewa Shiksha Samiti intelligence</span>
+        </div>
+        <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200/50 dark:border-emerald-800/50">
+          ● Verified Campus AI
+        </span>
+      </div>
+
       {/* Messages Scroll Area */}
-      <div className="flex-1 overflow-y-auto py-4 space-y-6">
+      <div className="flex-1 overflow-y-auto py-2 space-y-6">
         {messages.length === 0 ? (
           /* Landing Experience / Empty State */
           <div className="max-w-3xl mx-auto py-6 sm:py-10 px-4 text-center animate-in fade-in duration-300">
@@ -297,6 +382,118 @@ export const StudentChat: React.FC<StudentChatProps> = ({
                 </p>
               </div>
             </div>
+
+            {/* AI Academic & Career Suite Showcase */}
+            {onOpenAITools && (
+              <div className="mb-8 p-4 rounded-2xl bg-gradient-to-br from-blue-50/70 via-indigo-50/50 to-purple-50/70 dark:from-slate-900 dark:via-blue-950/20 dark:to-slate-900 border border-blue-200/80 dark:border-blue-900/40 text-left shadow-xs">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Wand2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    <span className="font-extrabold text-xs text-slate-900 dark:text-white uppercase tracking-wider">
+                      Specialized AI Tools Suite
+                    </span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-600 text-white shadow-xs">
+                      NEW
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Click to launch smart assistant
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                  <button
+                    onClick={() => onOpenAITools('study-plan')}
+                    className="p-3 rounded-xl bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-xs transition-all text-left group cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                        <Calendar className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="font-bold text-xs text-slate-900 dark:text-white">RGPV Planner</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2">
+                      Structured week-by-week revision schedule & PYQs
+                    </p>
+                  </button>
+
+                  <button
+                    onClick={() => onOpenAITools('placement-coach')}
+                    className="p-3 rounded-xl bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 hover:border-emerald-400 dark:hover:border-emerald-500 hover:shadow-xs transition-all text-left group cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                        <Briefcase className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="font-bold text-xs text-slate-900 dark:text-white">Placement Coach</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2">
+                      Company patterns for TCS, Cisco, Persistent & 44 LPA prep
+                    </p>
+                  </button>
+
+                  <button
+                    onClick={() => onOpenAITools('condonation-letter')}
+                    className="p-3 rounded-xl bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 hover:border-amber-400 dark:hover:border-amber-500 hover:shadow-xs transition-all text-left group cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="p-1.5 rounded-lg bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400 group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                        <FileText className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="font-bold text-xs text-slate-900 dark:text-white">Condonation Drafter</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2">
+                      Official RGPV Ordinance 4 medical application letter
+                    </p>
+                  </button>
+
+                  <button
+                    onClick={() => onOpenAITools('concept-explainer')}
+                    className="p-3 rounded-xl bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-xs transition-all text-left group cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="p-1.5 rounded-lg bg-purple-50 dark:bg-purple-950 text-purple-600 dark:text-purple-400 group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                        <Lightbulb className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="font-bold text-xs text-slate-900 dark:text-white">Concept Explainer</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2">
+                      Analogies, code implementations & 7-mark exam answers
+                    </p>
+                  </button>
+
+                  <button
+                    onClick={() => onOpenAITools('attendance-calc')}
+                    className="p-3 rounded-xl bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 hover:border-rose-400 dark:hover:border-rose-500 hover:shadow-xs transition-all text-left group cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="p-1.5 rounded-lg bg-rose-50 dark:bg-rose-950 text-rose-600 dark:text-rose-400 group-hover:bg-rose-600 group-hover:text-white transition-colors">
+                        <Calculator className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="font-bold text-xs text-slate-900 dark:text-white">Attendance Calc</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2">
+                      Recovery calculator against 75% RGPV requirement
+                    </p>
+                  </button>
+
+                  <button
+                    onClick={() => onOpenAITools('notice-analyzer')}
+                    className="p-3 rounded-xl bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 hover:border-sky-400 dark:hover:border-sky-500 hover:shadow-xs transition-all text-left group cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="p-1.5 rounded-lg bg-sky-50 dark:bg-sky-950 text-sky-600 dark:text-sky-400 group-hover:bg-sky-600 group-hover:text-white transition-colors">
+                        <FileCheck className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="font-bold text-xs text-slate-900 dark:text-white">Notice Analyzer</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2">
+                      Extract deadlines & action items from any circular
+                    </p>
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Suggested Prompts */}
             <div className="text-left">
@@ -466,6 +663,40 @@ export const StudentChat: React.FC<StudentChatProps> = ({
                     </div>
                   )}
 
+                  {/* AI Summary Card (if triggered) */}
+                  {!isUser && summaries[msg.id] && (
+                    <div className="mt-3 p-3 rounded-xl bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/50 text-xs animate-in fade-in duration-200">
+                      <div className="flex items-center justify-between gap-1.5 text-blue-700 dark:text-blue-300 font-bold mb-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                          <span>AI Key Takeaways</span>
+                        </div>
+                        <button
+                          onClick={() => toggleSummarize(msg.id, msg.content)}
+                          className="text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                        >
+                          Dismiss
+                        </button>
+                      </div>
+                      <div className="text-slate-700 dark:text-slate-300 whitespace-pre-line leading-relaxed font-sans text-xs">
+                        {summaries[msg.id]}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Staff Verification Ticket Notification */}
+                  {!isUser && msg.ticketId && (
+                    <div className="mt-3 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 flex items-center justify-between text-xs text-amber-800 dark:text-amber-300">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                        <span className="font-medium">Forwarded to college academic staff for verification</span>
+                      </div>
+                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-900/60 font-mono font-bold">
+                        Ticket: {msg.ticketId}
+                      </span>
+                    </div>
+                  )}
+
                   {/* Source Transparency */}
                   {!isUser && msg.sources && msg.sources.length > 0 && (
                     <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800/60 flex flex-wrap items-center gap-2 text-[11px]">
@@ -478,10 +709,15 @@ export const StudentChat: React.FC<StudentChatProps> = ({
                           href={src.sourceUrl || 'https://sritgroup.net/'}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-blue-700 dark:text-blue-300 hover:underline border border-slate-200 dark:border-slate-700/60"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-blue-700 dark:text-blue-300 hover:underline border border-slate-200 dark:border-slate-700/60"
                         >
-                          <span className="truncate max-w-[200px]">{src.title}</span>
-                          <ExternalLink className="w-2.5 h-2.5" />
+                          <span className="truncate max-w-[220px] font-medium">{src.title}</span>
+                          {src.verifiedDate && (
+                            <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/60 px-1 py-0.2 rounded">
+                              Verified: {src.verifiedDate}
+                            </span>
+                          )}
+                          <ExternalLink className="w-2.5 h-2.5 opacity-60" />
                         </a>
                       ))}
                     </div>
@@ -489,7 +725,7 @@ export const StudentChat: React.FC<StudentChatProps> = ({
 
                   {/* Action & Feedback Bar for Assistant */}
                   {!isUser && (
-                    <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between text-[11px] text-slate-400">
+                    <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800/60 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
                       <span className="flex items-center gap-1 text-[10px]">
                         <Clock className="w-3 h-3" />
                         {new Date(msg.createdAt).toLocaleTimeString([], {
@@ -498,7 +734,49 @@ export const StudentChat: React.FC<StudentChatProps> = ({
                         })}
                       </span>
 
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <button
+                          onClick={() => toggleSummarize(msg.id, msg.content)}
+                          disabled={summarizingId === msg.id}
+                          className={`p-1 px-2 rounded-md transition-colors flex items-center gap-1 cursor-pointer font-medium text-[10px] ${
+                            summaries[msg.id]
+                              ? 'text-amber-600 bg-amber-50 dark:bg-amber-950/50 font-bold'
+                              : 'text-slate-500 hover:text-amber-600 hover:bg-slate-100 dark:hover:bg-slate-800'
+                          }`}
+                          title="Generate AI summary of this answer"
+                        >
+                          <Zap className={`w-3 h-3 ${summarizingId === msg.id ? 'animate-bounce text-amber-500' : 'text-amber-500'}`} />
+                          <span>{summarizingId === msg.id ? 'Summarizing...' : summaries[msg.id] ? 'Hide Summary' : 'AI Summary'}</span>
+                        </button>
+
+                        <button
+                          onClick={() => speakText(msg.id, msg.content)}
+                          className={`p-1 px-2 rounded-md transition-colors flex items-center gap-1 cursor-pointer font-medium text-[10px] ${
+                            speakingMsgId === msg.id
+                              ? 'text-blue-600 bg-blue-50 dark:bg-blue-950/60 font-bold'
+                              : 'text-slate-500 hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800'
+                          }`}
+                          title={speakingMsgId === msg.id ? 'Stop audio' : 'Listen to AI answer'}
+                        >
+                          {speakingMsgId === msg.id ? (
+                            <VolumeX className="w-3 h-3 animate-pulse text-rose-500" />
+                          ) : (
+                            <Volume2 className="w-3 h-3" />
+                          )}
+                          <span>{speakingMsgId === msg.id ? 'Stop' : 'Listen'}</span>
+                        </button>
+
+                        <button
+                          onClick={() => copyText(msg.id, msg.content)}
+                          className="p-1 px-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 transition-colors flex items-center gap-1 cursor-pointer font-medium text-[10px]"
+                          title="Copy response"
+                        >
+                          {copiedId === msg.id ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                          <span>{copiedId === msg.id ? 'Copied!' : 'Copy'}</span>
+                        </button>
+
+                        <span className="w-px h-3 bg-slate-200 dark:bg-slate-700 mx-0.5" />
+
                         <button
                           onClick={() => handleHelpful(msg)}
                           className={`p-1 rounded-md transition-colors flex items-center gap-1 cursor-pointer ${
@@ -558,7 +836,82 @@ export const StudentChat: React.FC<StudentChatProps> = ({
       </div>
 
       {/* Input Box Area */}
-      <div className="py-3 bg-gradient-to-t from-slate-50 via-slate-50 to-transparent dark:from-slate-950 dark:via-slate-950 dark:to-transparent">
+      <div className="py-2 bg-gradient-to-t from-slate-50 via-slate-50 to-transparent dark:from-slate-950 dark:via-slate-950 dark:to-transparent">
+        {/* AI Tools Quick Bar */}
+        {onOpenAITools && (
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-none text-[11px]">
+            <span className="text-[10px] uppercase font-bold text-indigo-600 dark:text-indigo-400 shrink-0 flex items-center gap-1 bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded-full border border-indigo-200/50 dark:border-indigo-900/50">
+              <Wand2 className="w-3 h-3 text-indigo-600 dark:text-indigo-400" /> AI Tools:
+            </span>
+            <button
+              type="button"
+              onClick={() => onOpenAITools('study-plan')}
+              className="shrink-0 px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-950/60 border border-blue-200/80 dark:border-blue-900/50 hover:bg-blue-100 dark:hover:bg-blue-900 text-blue-700 dark:text-blue-300 font-semibold cursor-pointer flex items-center gap-1 transition-all"
+            >
+              <Calendar className="w-3 h-3 text-blue-500" />
+              <span>Exam Planner</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onOpenAITools('placement-coach')}
+              className="shrink-0 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/80 dark:border-emerald-900/50 hover:bg-emerald-100 dark:hover:bg-emerald-900 text-emerald-700 dark:text-emerald-300 font-semibold cursor-pointer flex items-center gap-1 transition-all"
+            >
+              <Briefcase className="w-3 h-3 text-emerald-500" />
+              <span>Placement Coach</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onOpenAITools('condonation-letter')}
+              className="shrink-0 px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-950/60 border border-amber-200/80 dark:border-amber-900/50 hover:bg-amber-100 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 font-semibold cursor-pointer flex items-center gap-1 transition-all"
+            >
+              <FileText className="w-3 h-3 text-amber-500" />
+              <span>Condonation Drafter</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onOpenAITools('concept-explainer')}
+              className="shrink-0 px-2.5 py-1 rounded-full bg-purple-50 dark:bg-purple-950/60 border border-purple-200/80 dark:border-purple-900/50 hover:bg-purple-100 dark:hover:bg-purple-900 text-purple-700 dark:text-purple-300 font-semibold cursor-pointer flex items-center gap-1 transition-all"
+            >
+              <Lightbulb className="w-3 h-3 text-purple-500" />
+              <span>Concept Explainer</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onOpenAITools('attendance-calc')}
+              className="shrink-0 px-2.5 py-1 rounded-full bg-rose-50 dark:bg-rose-950/60 border border-rose-200/80 dark:border-rose-900/50 hover:bg-rose-100 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 font-semibold cursor-pointer flex items-center gap-1 transition-all"
+            >
+              <Calculator className="w-3 h-3 text-rose-500" />
+              <span>Attendance Calc</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onOpenAITools('notice-analyzer')}
+              className="shrink-0 px-2.5 py-1 rounded-full bg-sky-50 dark:bg-sky-950/60 border border-sky-200/80 dark:border-sky-900/50 hover:bg-sky-100 dark:hover:bg-sky-900 text-sky-700 dark:text-sky-300 font-semibold cursor-pointer flex items-center gap-1 transition-all"
+            >
+              <FileCheck className="w-3 h-3 text-sky-500" />
+              <span>Notice Analyzer</span>
+            </button>
+          </div>
+        )}
+
+        {/* Quick Suggestion Pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-none text-[11px]">
+          <span className="text-[10px] uppercase font-bold text-slate-400 shrink-0 flex items-center gap-1">
+            <Sparkles className="w-3 h-3 text-blue-500" /> Suggestions:
+          </span>
+          {quickPromptPills.map((pill, pIdx) => (
+            <button
+              key={pIdx}
+              type="button"
+              onClick={() => handleSend(pill)}
+              disabled={loading}
+              className="shrink-0 px-2.5 py-1 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 transition-all text-slate-600 dark:text-slate-300 shadow-2xs font-medium cursor-pointer disabled:opacity-50"
+            >
+              {pill}
+            </button>
+          ))}
+        </div>
+
         <div className="relative bg-white dark:bg-slate-900 rounded-2xl border border-slate-300 dark:border-slate-800 shadow-md focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all p-2">
           <textarea
             ref={textareaRef}

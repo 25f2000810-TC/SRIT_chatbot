@@ -1,0 +1,79 @@
+{
+  "entities": {
+    "user": {
+      "title": "User",
+      "description": "User profile with authentication and role",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["student", "faculty", "admin"] },
+        "branch": { "type": "string" },
+        "semester": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "lastLoginAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "conversation": {
+      "title": "Conversation",
+      "description": "Multi-turn chat session",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "modelRole": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "title"]
+    },
+    "message": {
+      "title": "Message",
+      "description": "Chat message in conversation",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "assistant", "system"] },
+        "content": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "role", "content"]
+    },
+    "savedToolItem": {
+      "title": "SavedToolItem",
+      "description": "Saved study plans, condonation letters, or calculations",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "toolType": { "type": "string" },
+        "title": { "type": "string" },
+        "data": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "toolType", "title"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/user" },
+      "description": "Stores user profiles"
+    },
+    "/users/{userId}/conversations/{convId}": {
+      "schema": { "$ref": "#/entities/conversation" },
+      "description": "Stores user conversations"
+    },
+    "/users/{userId}/conversations/{convId}/messages/{msgId}": {
+      "schema": { "$ref": "#/entities/message" },
+      "description": "Stores messages in a conversation"
+    },
+    "/users/{userId}/savedItems/{itemId}": {
+      "schema": { "$ref": "#/entities/savedToolItem" },
+      "description": "Stores saved academic plans, letters, and favorites"
+    }
+  }
+}

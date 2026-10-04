@@ -173,12 +173,12 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
         setStatisticsList(res.statistics || []);
       } else if (activeSection === 'knowledge') {
         const res = await api.listKnowledge({ search: adminSearch });
-        setKnowledgeList(res.items || []);
+        setKnowledgeList((res as any).knowledge || (res as any).items || []);
       } else if (activeSection === 'events') {
         const res = await api.listEvents({ search: adminSearch });
         setEventsList(res.events || []);
       } else if (activeSection === 'clubs') {
-        const res = await api.listClubs({ search: adminSearch });
+        const res = await api.listClubs();
         setClubsList(res.clubs || []);
       } else if (activeSection === 'documents') {
         const res = await api.listDocuments();
@@ -278,7 +278,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
       if (editingPerson.id) {
         await api.updatePerson(editingPerson.id, editingPerson);
       } else {
-        await api.createPerson(editingPerson);
+        await api.createPerson(editingPerson as any);
       }
       setPersonModalOpen(false);
       setEditingPerson(null);
@@ -296,7 +296,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
       if (editingFaculty.id) {
         await api.updateFaculty(editingFaculty.id, editingFaculty);
       } else {
-        await api.createFaculty(editingFaculty);
+        await api.createFaculty(editingFaculty as any);
       }
       setFacultyModalOpen(false);
       setEditingFaculty(null);
@@ -1495,7 +1495,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                       <td className="p-3.5">
                         <span
                           className={`px-2 py-0.5 rounded-full font-semibold ${
-                            q.status === 'Answered'
+                            q.status === 'ANSWERED' || q.status === 'PUBLISHED'
                               ? 'bg-emerald-100 text-emerald-800'
                               : 'bg-amber-100 text-amber-800'
                           }`}
@@ -1504,7 +1504,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                         </span>
                       </td>
                       <td className="p-3.5 text-right space-x-2">
-                        {q.status !== 'Answered' && (
+                        {q.status !== 'ANSWERED' && q.status !== 'PUBLISHED' && (
                           <button
                             onClick={() => {
                               setTargetQuestion(q);

@@ -1,9 +1,11 @@
 import express from 'express';
+import http from 'http';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { apiRouter } from './server/routes.js';
+import { setupLiveVoiceSocket } from './server/liveVoiceService.js';
 
 dotenv.config();
 
@@ -49,7 +51,10 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  const httpServer = http.createServer(app);
+  setupLiveVoiceSocket(httpServer);
+
+  httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`SRIT AI Assistant server is running on http://0.0.0.0:${PORT}`);
   });
 }
